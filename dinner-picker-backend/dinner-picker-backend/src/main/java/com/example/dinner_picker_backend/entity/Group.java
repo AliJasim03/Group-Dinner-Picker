@@ -1,5 +1,7 @@
 package com.example.dinner_picker_backend.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import java.time.LocalDateTime;
@@ -39,6 +41,7 @@ public class Group {
     private Set<User> members = new HashSet<>();
 
     @OneToMany(mappedBy = "group", cascade = CascadeType.ALL)
+    @JsonManagedReference
     private List<VotingSession> votingSessions = new ArrayList<>();
 
     // Constructors

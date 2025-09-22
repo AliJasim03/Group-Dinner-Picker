@@ -1,5 +1,6 @@
 package com.example.dinner_picker_backend.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -23,8 +24,11 @@ public class User {
 
     private String avatar; // URL or emoji
 
+/*
     @ManyToMany(mappedBy = "members")
+    @JsonIgnore
     private Set<Group> groups = new HashSet<>();
+*/
 
     // Constructors
     public User() {}
@@ -48,6 +52,6 @@ public class User {
     public String getAvatar() { return avatar; }
     public void setAvatar(String avatar) { this.avatar = avatar; }
 
-    public Set<Group> getGroups() { return groups; }
-    public void setGroups(Set<Group> groups) { this.groups = groups; }
+/*    public Set<Group> getGroups() { return groups; }
+    public void setGroups(Set<Group> groups) { this.groups = groups; }*/
 }

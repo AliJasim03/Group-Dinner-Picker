@@ -1,5 +1,7 @@
 package com.example.dinner_picker_backend.entity;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import java.time.LocalDateTime;
@@ -30,6 +32,7 @@ public class VotingSession {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "group_id", nullable = false)
+    @JsonBackReference
     private Group group;
 
     @OneToMany(mappedBy = "votingSession", cascade = CascadeType.ALL)
