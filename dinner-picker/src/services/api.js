@@ -9,24 +9,27 @@ const api = axios.create({
     },
 });
 
-export const dinnerAPI = {
-    // Get all proposals
-    getOptions: () => api.get('/options'),
+// Groups API
+export const groupAPI = {
+    getAllGroups: () => api.get('/api/groups'),
+    getGroup: (id) => api.get(`/api/groups/${id}`),
+    createGroup: (groupData) => api.post('/api/groups', groupData),
+    getUserGroups: (userId) => api.get(`/api/groups/user/${userId}`),
+};
 
-    // Add new proposal
-    addOption: (proposal) => api.post('/options', proposal),
+// Voting Sessions API
+export const sessionAPI = {
+    getGroupSessions: (groupId) => api.get(`/api/sessions/group/${groupId}`),
+    getSession: (id) => api.get(`/api/sessions/${id}`),
+    createSession: (sessionData) => api.post('/api/sessions', sessionData),
+    lockSession: (id, locked) => api.post(`/api/sessions/${id}/lock`, { locked }),
+};
 
-    // Vote on proposal
-    vote: (optionId, delta) => api.post('/vote', { optionId, delta }),
-
-    // Lock voting
-    lockVoting: (locked) => api.post('/lock', { locked }),
-
-    // Get winner
-    getWinner: () => api.get('/winner'),
-
-    // Get status
-    getStatus: () => api.get('/status'),
+// Options API
+export const optionAPI = {
+    getSessionOptions: (sessionId) => api.get(`/api/sessions/${sessionId}/options`),
+    addOption: (optionData) => api.post('/api/options', optionData),
+    vote: (optionId, delta) => api.post(`/api/options/${optionId}/vote`, { delta }),
 };
 
 export default api;

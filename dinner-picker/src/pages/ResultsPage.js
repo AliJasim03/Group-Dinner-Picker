@@ -1,48 +1,66 @@
 import React, { useState, useEffect } from 'react';
 import {
+    Container,
     Typography,
-    Button,
     Box,
-    Paper,
-    Alert,
     Card,
     CardContent,
+    Button,
+    Avatar,
     Chip,
-    Link,
-    Divider
+    LinearProgress,
+    Paper,
+    Grid,
+    Divider,
+    List,
+    ListItem,
+    ListItemAvatar,
+    ListItemText,
+    IconButton,
+    Tooltip,
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    DialogActions
 } from '@mui/material';
 import {
     ArrowBack as ArrowBackIcon,
     EmojiEvents as TrophyIcon,
-    Launch as LaunchIcon
+    Launch as LaunchIcon,
+    Share as ShareIcon,
+    Download as DownloadIcon,
+    WhatsApp as WhatsAppIcon,
+    Twitter as TwitterIcon,
+    Facebook as FacebookIcon
 } from '@mui/icons-material';
-import { useNavigate } from 'react-router-dom';
-import LoadingSpinner from '../components/LoadingSpinner';
-import { dinnerAPI } from '../services/api';
+import { useParams, useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
+import toast from 'react-hot-toast';
+import Confetti from 'react-confetti';
+import { sessionAPI, optionAPI } from '../services/api';
 
 const ResultsPage = () => {
-    const [winner, setWinner] = useState(null);
-    const [allProposals, setAllProposals] = useState([]);
-    const [votingLocked, setVotingLocked] = useState(false);
+    const { sessionId } = useParams();
+    const [session, setSession] = useState(null);
+    const [options, setOptions] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
+    const [shareDialogOpen, setShareDialogOpen] = useState(false);
+    const [showConfetti, setShowConfetti] = useState(false);
     const navigate = useNavigate();
 
     const fetchResults = async () => {
         try {
             setLoading(true);
-            const [winnerResponse, proposalsResponse, statusResponse] = await Promise.all([
-                dinnerAPI.getWinner(),
-                dinnerAPI.getOptions(),
-                dinnerAPI.getStatus()
+            const [sessionResponse, optionsResponse] = await Promise.all([
+                sessionAPI.getSession(sessionId),
+                optionAPI.getSessionOptions(sessionId)
             ]);
 
-            setWinner(winnerResponse.data.winner);
-            setAllProposals(proposalsResponse.data.sort((a, b) => b.votes - a.votes));
-            setVotingLocked(statusResponse.data.locked);
-        } catch (err) {
-            setError('Failed to fetch results');
-            console.error('Error:', err);
+            setSession(sessionResponse.data);
+            setOptions(optionsResponse.data.sort((a, b) => b.votes - a.votes));
+        } catch (error) {
+            toast.error('Failed to load results');
+            navigate('/groups');
         } finally {
             setLoading(false);
         }
@@ -50,194 +68,501 @@ const ResultsPage = () => {
 
     useEffect(() => {
         fetchResults();
-    }, []);
+        // Show confetti on page load
+        setShowConfetti(true);
+        setTimeout(() => setShowConfetti(false), 3000);
+    }, [sessionId]);
 
-    if (loading) return <LoadingSpinner />;
+    const totalVotes = options.reduce((sum, option) => sum + option.votes, 0);
+    const winner = options.length > 0 && options[0].votes > 0 ? options[0] : null;
+    const hasVotes = options.some(option => option.votes > 0);
 
-    if (error) {
+    const getPercentage = (votes) => {
+        return totalVotes > 0 ? Math.round((votes / totalVotes) * 100) : 0;
+    };
+
+    const getMedalEmoji = (rank) => {
+        switch(rank) {
+            case 1: return '🥇';
+            case 2: return '🥈';
+            case 3: return '🥉';
+            default: return `#${rank}`;
+        }
+    };
+
+    const getGradientColor = (rank, votes) => {
+        if (votes === 0) return 'linear-gradient(135deg, #e0e0e0 0%, #bdbdbd 100%)';
+
+        switch(rank) {
+            case 1: return 'linear-gradient(135deg, #ffd700 0%, #ffed4a 100%)';
+            case 2: return 'linear-gradient(135deg, #c0c0c0 0%, #e8e8e8 100%)';
+            case 3: return 'linear-gradient(135deg, #cd7f32 0%, #daa520 100%)';
+            default: return 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+        }
+    };
+
+    const handleShare = (platform) => {
+        const url = window.location.href;
+        const text = `🎉 ${winner ? `${winner.name} won our dining vote` : 'Check out our dining vote results'}! ${session?.title || ''}`;
+
+        let shareUrl = '';
+        switch(platform) {
+            case 'whatsapp':
+                shareUrl = `https://wa.me/?text=${encodeURIComponent(text + ' ' + url)}`;
+                break;
+            case 'twitter':
+                shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`;
+                break;
+            case 'facebook':
+                shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`;
+                break;
+        }
+
+        if (shareUrl) {
+            window.open(shareUrl, '_blank');
+        }
+        setShareDialogOpen(false);
+    };
+
+    const exportResults = () => {
+        const resultsText = `
+🍽️ ${session?.title || 'Dining Vote'} Results
+${session?.description ? `📝 ${session.description}\n` : ''}
+📊 Total Votes: ${totalVotes}
+📅 ${new Date().toLocaleDateString()}
+
+${winner ? `🏆 WINNER: ${winner.name} (${winner.votes} votes)\n` : ''}
+
+📈 Full Results:
+${options.map((option, index) =>
+            `${getMedalEmoji(index + 1)} ${option.name}: ${option.votes} votes (${getPercentage(option.votes)}%)`
+        ).join('\n')}
+
+Generated by DinePick 🍜
+    `.trim();
+
+        const blob = new Blob([resultsText], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `dining-vote-results-${new Date().toISOString().split('T')[0]}.txt`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        toast.success('Results exported! 📄');
+    };
+
+    if (loading) {
         return (
-            <Box>
-                <Button
-                    startIcon={<ArrowBackIcon />}
-                    onClick={() => navigate('/')}
-                    sx={{ mb: 3 }}
-                >
-                    Back to Proposals
-                </Button>
-                <Alert severity="error">{error}</Alert>
-            </Box>
+            <Container maxWidth="lg">
+                <Box sx={{ py: 4 }}>
+                    <LinearProgress sx={{ mb: 4, borderRadius: 2, height: 6 }} />
+                    <Typography variant="h5" sx={{ color: 'white', textAlign: 'center' }}>
+                        Calculating results...
+                    </Typography>
+                </Box>
+            </Container>
         );
     }
 
-    const hasVotes = allProposals.some(p => p.votes > 0);
+    if (!session) {
+        return (
+            <Container maxWidth="lg">
+                <Box sx={{ py: 4, textAlign: 'center' }}>
+                    <Typography variant="h4" sx={{ color: 'white' }}>Session not found</Typography>
+                    <Button onClick={() => navigate('/groups')} sx={{ mt: 2, color: 'white' }}>
+                        Back to Groups
+                    </Button>
+                </Box>
+            </Container>
+        );
+    }
 
     return (
-        <Box>
-            <Button
-                startIcon={<ArrowBackIcon />}
-                onClick={() => navigate('/')}
-                sx={{ mb: 3 }}
+        <Container maxWidth="lg">
+            {showConfetti && (
+                <Confetti
+                    width={window.innerWidth}
+                    height={window.innerHeight}
+                    numberOfPieces={100}
+                    gravity={0.1}
+                />
+            )}
+
+            <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6 }}
             >
-                Back to Proposals
-            </Button>
+                <Box sx={{ py: 4 }}>
+                    <Button
+                        startIcon={<ArrowBackIcon />}
+                        onClick={() => navigate(`/sessions/${sessionId}`)}
+                        sx={{ mb: 3, color: 'white' }}
+                    >
+                        Back to Session
+                    </Button>
 
-            <Typography variant="h4" component="h1" gutterBottom>
-                🏆 Results
-            </Typography>
+                    {/* Header */}
+                    <Card sx={{
+                        mb: 4,
+                        background: session.group?.colorTheme ?
+                            `linear-gradient(135deg, ${session.group.colorTheme} 0%, ${session.group.colorTheme}90 100%)` :
+                            'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                        color: 'white'
+                    }}>
+                        <CardContent sx={{ p: 4, textAlign: 'center' }}>
+                            <motion.div
+                                animate={{ rotate: 360 }}
+                                transition={{ duration: 2, ease: "linear" }}
+                                style={{ display: 'inline-block' }}
+                            >
+                                <TrophyIcon sx={{ fontSize: 80, mb: 2, color: '#ffd700' }} />
+                            </motion.div>
+                            <Typography variant="h3" gutterBottom sx={{ fontWeight: 700 }}>
+                                🎉 Final Results 🎉
+                            </Typography>
+                            <Typography variant="h5" gutterBottom>
+                                {session.title}
+                            </Typography>
+                            <Typography variant="body1" sx={{ opacity: 0.9, mb: 3 }}>
+                                {session.description}
+                            </Typography>
 
-            {votingLocked && (
-                <Alert severity="success" sx={{ mb: 3 }}>
-                    Voting has been locked. These are the final results!
-                </Alert>
-            )}
+                            <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, flexWrap: 'wrap' }}>
+                                <Chip
+                                    label={`${options.length} restaurants`}
+                                    sx={{ bgcolor: 'rgba(255, 255, 255, 0.2)', color: 'white' }}
+                                />
+                                <Chip
+                                    label={`${totalVotes} total votes`}
+                                    sx={{ bgcolor: 'rgba(255, 255, 255, 0.2)', color: 'white' }}
+                                />
+                                <Chip
+                                    label={new Date().toLocaleDateString()}
+                                    sx={{ bgcolor: 'rgba(255, 255, 255, 0.2)', color: 'white' }}
+                                />
+                            </Box>
 
-            {!hasVotes ? (
-                <Paper sx={{ p: 4, textAlign: 'center' }}>
-                    <Typography variant="h6" color="text.secondary">
-                        No votes yet!
-                    </Typography>
-                    <Typography variant="body1" color="text.secondary" sx={{ mt: 1 }}>
-                        Go back and start voting to see results.
-                    </Typography>
-                </Paper>
-            ) : (
-                <>
-                    {/* Winner Card */}
-                    {winner && winner.votes > 0 && (
-                        <Card sx={{
-                            mb: 4,
-                            background: 'linear-gradient(135deg, #FFD700 0%, #FFA500 100%)',
-                            color: 'black',
-                            position: 'relative'
-                        }}>
-                            <CardContent sx={{ pb: 3 }}>
-                                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                                    <TrophyIcon sx={{ fontSize: 40, mr: 2 }} />
-                                    <Box>
-                                        <Typography variant="h5" sx={{ fontWeight: 'bold' }}>
-                                            🎉 Winner!
-                                        </Typography>
-                                        <Typography variant="body2">
-                                            The group has chosen
-                                        </Typography>
-                                    </Box>
-                                </Box>
-
-                                <Typography variant="h4" sx={{ fontWeight: 'bold', mb: 1 }}>
-                                    {winner.name}
-                                </Typography>
-
-                                <Link
-                                    href={winner.link}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    sx={{
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        color: 'primary.dark',
-                                        textDecoration: 'none',
-                                        '&:hover': { textDecoration: 'underline' }
-                                    }}
+                            <Box sx={{ mt: 3, display: 'flex', justifyContent: 'center', gap: 1 }}>
+                                <Button
+                                    variant="contained"
+                                    startIcon={<ShareIcon />}
+                                    onClick={() => setShareDialogOpen(true)}
+                                    sx={{ bgcolor: 'rgba(255, 255, 255, 0.2)', '&:hover': { bgcolor: 'rgba(255, 255, 255, 0.3)' } }}
                                 >
-                                    <Typography variant="body1" sx={{ mr: 1 }}>
-                                        Visit Website
-                                    </Typography>
-                                    <LaunchIcon />
-                                </Link>
+                                    Share Results
+                                </Button>
+                                <Button
+                                    variant="contained"
+                                    startIcon={<DownloadIcon />}
+                                    onClick={exportResults}
+                                    sx={{ bgcolor: 'rgba(255, 255, 255, 0.2)', '&:hover': { bgcolor: 'rgba(255, 255, 255, 0.3)' } }}
+                                >
+                                    Export
+                                </Button>
+                            </Box>
+                        </CardContent>
+                    </Card>
 
-                                <Box sx={{ display: 'flex', alignItems: 'center', mt: 2 }}>
-                                    <Typography variant="h3" sx={{ fontWeight: 'bold', mr: 2 }}>
-                                        {winner.votes}
-                                    </Typography>
-                                    <Typography variant="body1">
-                                        {winner.votes === 1 ? 'vote' : 'votes'}
-                                    </Typography>
-                                </Box>
+                    {!hasVotes ? (
+                        <Card sx={{ background: 'rgba(255, 255, 255, 0.95)' }}>
+                            <CardContent sx={{ textAlign: 'center', py: 8 }}>
+                                <Avatar sx={{
+                                    width: 120,
+                                    height: 120,
+                                    mx: 'auto',
+                                    mb: 3,
+                                    bgcolor: 'grey.200',
+                                    fontSize: 60
+                                }}>
+                                    🤷‍♂️
+                                </Avatar>
+                                <Typography variant="h4" gutterBottom>
+                                    No votes yet!
+                                </Typography>
+                                <Typography variant="body1" color="text.secondary">
+                                    It looks like no one voted in this session.
+                                </Typography>
                             </CardContent>
                         </Card>
+                    ) : (
+                        <>
+                            {/* Winner Card */}
+                            {winner && (
+                                <motion.div
+                                    initial={{ scale: 0.8, opacity: 0 }}
+                                    animate={{ scale: 1, opacity: 1 }}
+                                    transition={{ duration: 0.6, type: 'spring' }}
+                                >
+                                    <Card sx={{
+                                        mb: 4,
+                                        background: 'linear-gradient(135deg, #ffd700 0%, #ffed4a 100%)',
+                                        color: 'black',
+                                        border: '4px solid gold',
+                                        position: 'relative'
+                                    }}>
+                                        <CardContent sx={{ p: 4 }}>
+                                            <Box sx={{ textAlign: 'center', mb: 3 }}>
+                                                <Typography variant="h3" gutterBottom sx={{ fontWeight: 700 }}>
+                                                    🏆 WINNER! 🏆
+                                                </Typography>
+                                            </Box>
+
+                                            <Grid container spacing={3} alignItems="center">
+                                                <Grid item xs={12} md={4} textAlign="center">
+                                                    <Avatar sx={{
+                                                        width: 100,
+                                                        height: 100,
+                                                        mx: 'auto',
+                                                        mb: 2,
+                                                        bgcolor: 'rgba(0, 0, 0, 0.1)',
+                                                        fontSize: 40
+                                                    }}>
+                                                        🥇
+                                                    </Avatar>
+                                                </Grid>
+
+                                                <Grid item xs={12} md={8}>
+                                                    <Typography variant="h4" gutterBottom sx={{ fontWeight: 700 }}>
+                                                        {winner.name}
+                                                    </Typography>
+
+                                                    {winner.cuisine && (
+                                                        <Chip
+                                                            label={winner.cuisine}
+                                                            sx={{ mr: 1, mb: 1, bgcolor: 'rgba(0, 0, 0, 0.1)' }}
+                                                        />
+                                                    )}
+                                                    {winner.priceRange && (
+                                                        <Chip
+                                                            label={winner.priceRange}
+                                                            sx={{ mr: 1, mb: 1, bgcolor: 'rgba(0, 0, 0, 0.1)' }}
+                                                        />
+                                                    )}
+
+                                                    <Typography variant="h5" sx={{ mt: 2, mb: 2 }}>
+                                                        🗳️ {winner.votes} votes ({getPercentage(winner.votes)}%)
+                                                    </Typography>
+
+                                                    <Button
+                                                        variant="contained"
+                                                        endIcon={<LaunchIcon />}
+                                                        href={winner.link}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        sx={{
+                                                            bgcolor: '#ff6b6b',
+                                                            color: 'white',
+                                                            '&:hover': { bgcolor: '#ee5a24' }
+                                                        }}
+                                                    >
+                                                        Visit Restaurant
+                                                    </Button>
+                                                </Grid>
+                                            </Grid>
+                                        </CardContent>
+                                    </Card>
+                                </motion.div>
+                            )}
+
+                            {/* Full Results */}
+                            <Card sx={{ background: 'rgba(255, 255, 255, 0.95)' }}>
+                                <CardContent sx={{ p: 4 }}>
+                                    <Typography variant="h5" gutterBottom sx={{ mb: 3 }}>
+                                        📊 Complete Results
+                                    </Typography>
+
+                                    <List>
+                                        {options.map((option, index) => (
+                                            <motion.div
+                                                key={option.id}
+                                                initial={{ opacity: 0, x: -20 }}
+                                                animate={{ opacity: 1, x: 0 }}
+                                                transition={{ duration: 0.5, delay: index * 0.1 }}
+                                            >
+                                                <Paper
+                                                    sx={{
+                                                        mb: 2,
+                                                        background: getGradientColor(index + 1, option.votes),
+                                                        color: option.votes === 0 ? 'text.secondary' : index < 3 ? 'black' : 'white'
+                                                    }}
+                                                >
+                                                    <ListItem sx={{ p: 3 }}>
+                                                        <ListItemAvatar>
+                                                            <Avatar sx={{
+                                                                bgcolor: 'rgba(255, 255, 255, 0.2)',
+                                                                fontSize: 24,
+                                                                fontWeight: 'bold'
+                                                            }}>
+                                                                {getMedalEmoji(index + 1)}
+                                                            </Avatar>
+                                                        </ListItemAvatar>
+
+                                                        <ListItemText
+                                                            primary={
+                                                                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                                                    <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
+                                                                        {option.name}
+                                                                    </Typography>
+                                                                    <Typography variant="h5" sx={{ fontWeight: 'bold' }}>
+                                                                        {option.votes} ({getPercentage(option.votes)}%)
+                                                                    </Typography>
+                                                                </Box>
+                                                            }
+                                                            secondary={
+                                                                <Box>
+                                                                    {option.cuisine && (
+                                                                        <Chip
+                                                                            size="small"
+                                                                            label={option.cuisine}
+                                                                            sx={{
+                                                                                mr: 1,
+                                                                                mt: 1,
+                                                                                bgcolor: 'rgba(255, 255, 255, 0.3)',
+                                                                                color: 'inherit'
+                                                                            }}
+                                                                        />
+                                                                    )}
+                                                                    {option.priceRange && (
+                                                                        <Chip
+                                                                            size="small"
+                                                                            label={option.priceRange}
+                                                                            sx={{
+                                                                                mr: 1,
+                                                                                mt: 1,
+                                                                                bgcolor: 'rgba(255, 255, 255, 0.3)',
+                                                                                color: 'inherit'
+                                                                            }}
+                                                                        />
+                                                                    )}
+
+                                                                    <Box sx={{ mt: 2 }}>
+                                                                        <LinearProgress
+                                                                            variant="determinate"
+                                                                            value={getPercentage(option.votes)}
+                                                                            sx={{
+                                                                                height: 8,
+                                                                                borderRadius: 4,
+                                                                                bgcolor: 'rgba(255, 255, 255, 0.3)',
+                                                                                '& .MuiLinearProgress-bar': {
+                                                                                    bgcolor: option.votes === 0 ? 'grey.400' : 'rgba(255, 255, 255, 0.8)',
+                                                                                    borderRadius: 4
+                                                                                }
+                                                                            }}
+                                                                        />
+                                                                    </Box>
+                                                                </Box>
+                                                            }
+                                                        />
+
+                                                        <IconButton
+                                                            href={option.link}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            sx={{ color: 'inherit' }}
+                                                        >
+                                                            <LaunchIcon />
+                                                        </IconButton>
+                                                    </ListItem>
+                                                </Paper>
+                                            </motion.div>
+                                        ))}
+                                    </List>
+
+                                    <Divider sx={{ my: 3 }} />
+
+                                    {/* Summary Stats */}
+                                    <Grid container spacing={3}>
+                                        <Grid item xs={12} md={4}>
+                                            <Paper sx={{ p: 3, textAlign: 'center', bgcolor: 'primary.main', color: 'white' }}>
+                                                <Typography variant="h4" gutterBottom>
+                                                    {options.length}
+                                                </Typography>
+                                                <Typography variant="body1">
+                                                    Total Restaurants
+                                                </Typography>
+                                            </Paper>
+                                        </Grid>
+
+                                        <Grid item xs={12} md={4}>
+                                            <Paper sx={{ p: 3, textAlign: 'center', bgcolor: 'success.main', color: 'white' }}>
+                                                <Typography variant="h4" gutterBottom>
+                                                    {totalVotes}
+                                                </Typography>
+                                                <Typography variant="body1">
+                                                    Total Votes Cast
+                                                </Typography>
+                                            </Paper>
+                                        </Grid>
+
+                                        <Grid item xs={12} md={4}>
+                                            <Paper sx={{ p: 3, textAlign: 'center', bgcolor: 'warning.main', color: 'white' }}>
+                                                <Typography variant="h4" gutterBottom>
+                                                    {winner ? Math.round((winner.votes / totalVotes) * 100) : 0}%
+                                                </Typography>
+                                                <Typography variant="body1">
+                                                    Winner's Share
+                                                </Typography>
+                                            </Paper>
+                                        </Grid>
+                                    </Grid>
+                                </CardContent>
+                            </Card>
+                        </>
                     )}
+                </Box>
+            </motion.div>
 
-                    {/* Full Results */}
-                    <Typography variant="h5" gutterBottom sx={{ mt: 4 }}>
-                        All Results
+            {/* Share Dialog */}
+            <Dialog
+                open={shareDialogOpen}
+                onClose={() => setShareDialogOpen(false)}
+                maxWidth="sm"
+                fullWidth
+            >
+                <DialogTitle>
+                    📤 Share Results
+                </DialogTitle>
+                <DialogContent>
+                    <Typography gutterBottom>
+                        Share these exciting results with your friends!
                     </Typography>
-
-                    {allProposals.map((proposal, index) => (
-                        <Card
-                            key={proposal.id}
-                            sx={{
-                                mb: 2,
-                                opacity: proposal.votes === 0 ? 0.6 : 1,
-                                border: index === 0 && proposal.votes > 0 ? '2px solid gold' : 'none'
-                            }}
+                    <Box sx={{ display: 'flex', gap: 2, mt: 2, justifyContent: 'center' }}>
+                        <Button
+                            variant="contained"
+                            startIcon={<WhatsAppIcon />}
+                            onClick={() => handleShare('whatsapp')}
+                            sx={{ bgcolor: '#25d366' }}
                         >
-                            <CardContent>
-                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <Box sx={{ flex: 1 }}>
-                                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                                            <Chip
-                                                label={`#${index + 1}`}
-                                                size="small"
-                                                color={index === 0 && proposal.votes > 0 ? "warning" : "default"}
-                                                sx={{ mr: 2, fontWeight: 'bold' }}
-                                            />
-                                            <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
-                                                {proposal.name}
-                                            </Typography>
-                                        </Box>
-
-                                        <Link
-                                            href={proposal.link}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            sx={{
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                color: 'primary.main',
-                                                textDecoration: 'none',
-                                                '&:hover': { textDecoration: 'underline' }
-                                            }}
-                                        >
-                                            <Typography variant="body2" sx={{ mr: 1 }}>
-                                                {proposal.link}
-                                            </Typography>
-                                            <LaunchIcon fontSize="small" />
-                                        </Link>
-                                    </Box>
-
-                                    <Box sx={{ textAlign: 'right' }}>
-                                        <Typography
-                                            variant="h4"
-                                            sx={{
-                                                fontWeight: 'bold',
-                                                color: proposal.votes > 0 ? 'success.main' : 'text.secondary'
-                                            }}
-                                        >
-                                            {proposal.votes}
-                                        </Typography>
-                                        <Typography variant="body2" color="text.secondary">
-                                            {proposal.votes === 1 ? 'vote' : 'votes'}
-                                        </Typography>
-                                    </Box>
-                                </Box>
-                            </CardContent>
-                        </Card>
-                    ))}
-
-                    <Divider sx={{ my: 3 }} />
-
-                    <Alert severity="info">
-                        <Typography variant="body2">
-                            <strong>Total votes:</strong> {allProposals.reduce((sum, p) => sum + p.votes, 0)}
-                            <br />
-                            <strong>Proposals:</strong> {allProposals.length}
-                            <br />
-                            <strong>Status:</strong> {votingLocked ? 'Voting locked - Final results' : 'Voting still open'}
-                        </Typography>
-                    </Alert>
-                </>
-            )}
-        </Box>
+                            WhatsApp
+                        </Button>
+                        <Button
+                            variant="contained"
+                            startIcon={<TwitterIcon />}
+                            onClick={() => handleShare('twitter')}
+                            sx={{ bgcolor: '#1da1f2' }}
+                        >
+                            Twitter
+                        </Button>
+                        <Button
+                            variant="contained"
+                            startIcon={<FacebookIcon />}
+                            onClick={() => handleShare('facebook')}
+                            sx={{ bgcolor: '#4267b2' }}
+                        >
+                            Facebook
+                        </Button>
+                    </Box>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setShareDialogOpen(false)}>
+                        Close
+                    </Button>
+                </DialogActions>
+            </Dialog>
+        </Container>
     );
 };
 

@@ -22,6 +22,7 @@ public class DinnerPickerController {
     @Autowired
     private DinnerPickerService dinnerPickerService;
 
+    // Original endpoints for backward compatibility
     @GetMapping("/options")
     public ResponseEntity<List<Option>> getOptions() {
         try {
@@ -37,7 +38,23 @@ public class DinnerPickerController {
         Map<String, Object> response = new HashMap<>();
 
         try {
-            Option option = dinnerPickerService.addOption(request.getName(), request.getLink());
+            Option option;
+
+            // If votingSessionId is provided, use new method
+            if (request.getVotingSessionId() != null) {
+                option = dinnerPickerService.addOptionToSession(
+                        request.getName(),
+                        request.getLink(),
+                        request.getImageUrl(),
+                        request.getCuisine(),
+                        request.getPriceRange(),
+                        request.getVotingSessionId()
+                );
+            } else {
+                // Use old method for backward compatibility
+                option = dinnerPickerService.addOption(request.getName(), request.getLink());
+            }
+
             response.put("success", true);
             response.put("option", option);
             return ResponseEntity.status(HttpStatus.CREATED).body(response);

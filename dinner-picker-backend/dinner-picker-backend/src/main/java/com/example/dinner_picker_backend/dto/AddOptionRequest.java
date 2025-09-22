@@ -9,6 +9,13 @@ public class AddOptionRequest {
     @NotBlank(message = "Link is required")
     private String link;
 
+    private String imageUrl;
+    private String cuisine;
+    private String priceRange;
+
+    // Optional - for new functionality
+    private Long votingSessionId;
+
     // Constructors
     public AddOptionRequest() {}
 
@@ -23,4 +30,16 @@ public class AddOptionRequest {
 
     public String getLink() { return link; }
     public void setLink(String link) { this.link = link; }
+
+    public String getImageUrl() { return imageUrl; }
+    public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl; }
+
+    public String getCuisine() { return cuisine; }
+    public void setCuisine(String cuisine) { this.cuisine = cuisine; }
+
+    public String getPriceRange() { return priceRange; }
+    public void setPriceRange(String priceRange) { this.priceRange = priceRange; }
+
+    public Long getVotingSessionId() { return votingSessionId; }
+    public void setVotingSessionId(Long votingSessionId) { this.votingSessionId = votingSessionId; }
 }
