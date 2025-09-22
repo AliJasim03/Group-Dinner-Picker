@@ -46,7 +46,7 @@ export const theme = createTheme({
             fontWeight: 700,
             background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
             WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
+
             backgroundClip: 'text',
         },
         h2: {

@@ -23,6 +23,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
+import { theme } from '../theme/theme';
 
 const HomePage = () => {
     const [stats, setStats] = useState({
@@ -126,10 +127,10 @@ const HomePage = () => {
                 <Box sx={{ py: 6 }}>
                     {/* Hero Section */}
                     <Box sx={{ textAlign: 'center', mb: 6 }}>
-                        <Typography variant="h1" component="h1" gutterBottom>
+                        <Typography variant="h1" color={theme.palette.background.default} component="h1" gutterBottom>
                             Welcome back, Alex! 👋
                         </Typography>
-                        <Typography variant="h6" color="text.secondary" sx={{ mb: 4, maxWidth: 600, mx: 'auto' }}>
+                        <Typography variant="h6" color={theme.palette.background.paper} sx={{ mb: 4, maxWidth: 600, mx: 'auto' }}>
                             Ready to discover your next amazing dining experience? Let's see what your groups are up to!
                         </Typography>
 
