@@ -26,6 +26,7 @@ export const sessionAPI = {
 };
 
 // Options API
+// need implementation in spring
 export const optionAPI = {
     getSessionOptions: (sessionId) => api.get(`/api/sessions/${sessionId}/options`),
     addOption: (optionData) => api.post('/api/options', optionData),
