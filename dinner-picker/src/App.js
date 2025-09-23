@@ -13,6 +13,7 @@ import VotingSessionPage from './pages/VotingSessionPage';
 import CreateSessionPage from './pages/CreateSessionPage';
 import AddProposalPage from './pages/AddProposalPage';
 import ResultsPage from './pages/ResultsPage';
+import ViewResults from './pages/ViewResults';
 import './styles/animations.css';
 
 function App() {
@@ -57,6 +58,7 @@ function App() {
                             <Route path="/sessions/:sessionId" element={<VotingSessionPage />} />
                             <Route path="/sessions/:sessionId/add" element={<AddProposalPage />} />
                             <Route path="/sessions/:sessionId/results" element={<ResultsPage />} />
+                            <Route path="/results" element={<ViewResults />} />
                             <Route path="*" element={<Navigate to="/" replace />} />
                         </Routes>
                     </Box>

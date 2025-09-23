@@ -22,8 +22,8 @@ export const theme = createTheme({
         },
         warning: {
             main: '#ffa726',
-            light: '#ffb74d',
-            dark: '#ff9800',
+            light: '#f8c578ff',
+            dark: '#e98c00ff',
         },
         error: {
             main: '#f44336',

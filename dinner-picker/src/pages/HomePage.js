@@ -184,7 +184,7 @@ const HomePage = () => {
             description: 'Check recent winners',
             icon: <TrophyIcon />,
             color: '#00d4aa',
-            action: () => navigate('/groups')
+            action: () => navigate('/results')
         }
     ];
 
