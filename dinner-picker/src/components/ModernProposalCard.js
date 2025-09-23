@@ -11,7 +11,8 @@ import {
     Avatar,
     Tooltip,
     Zoom,
-    Collapse
+    Collapse,
+    LinearProgress
 } from '@mui/material';
 import {
     ThumbUp as ThumbUpIcon,
@@ -32,19 +33,31 @@ const ModernProposalCard = ({ proposal, rank, onVote, votingLocked, sessionLocke
 
     const isWinning = rank === 1 && proposal.votes > 0;
     const hasImage = proposal.imageUrl && proposal.imageUrl.trim() !== '';
+    const votes = proposal.votes || 0;
 
     const handleVote = async (delta) => {
-        if (isVoting || votingLocked || sessionLocked) return;
-
-        setIsVoting(true);
-        await onVote(proposal.id, delta);
-
-        if (delta > 0) {
-            setShowConfetti(true);
-            setTimeout(() => setShowConfetti(false), 3000);
+        if (isVoting || votingLocked || sessionLocked) {
+            console.log('Vote blocked:', { isVoting, votingLocked, sessionLocked });
+            return;
         }
 
-        setTimeout(() => setIsVoting(false), 500);
+        console.log('Processing vote:', { proposalId: proposal.id, delta });
+
+        setIsVoting(true);
+
+        try {
+            await onVote(proposal.id, delta);
+
+            if (delta > 0) {
+                setShowConfetti(true);
+                setTimeout(() => setShowConfetti(false), 2000);
+            }
+        } catch (error) {
+            console.error('Error in vote handler:', error);
+        } finally {
+            // Add a small delay to prevent rapid clicking
+            setTimeout(() => setIsVoting(false), 800);
+        }
     };
 
     const getPriceColor = (priceRange) => {
@@ -53,6 +66,24 @@ const ModernProposalCard = ({ proposal, rank, onVote, votingLocked, sessionLocke
             case '$$': return '#ff9800';
             case '$$$': return '#f44336';
             default: return '#666';
+        }
+    };
+
+    const getRankColor = (rank) => {
+        switch(rank) {
+            case 1: return '#ffd700'; // Gold
+            case 2: return '#c0c0c0'; // Silver
+            case 3: return '#cd7f32'; // Bronze
+            default: return '#667eea';
+        }
+    };
+
+    const getRankEmoji = (rank) => {
+        switch(rank) {
+            case 1: return '🥇';
+            case 2: return '🥈';
+            case 3: return '🥉';
+            default: return `#${rank}`;
         }
     };
 
@@ -72,7 +103,7 @@ const ModernProposalCard = ({ proposal, rank, onVote, votingLocked, sessionLocke
                 initial={{ opacity: 0, y: 30 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5 }}
-                whileHover={!votingLocked && !sessionLocked ? { y: -8 } : {}}
+                whileHover={!votingLocked && !sessionLocked ? { y: -4 } : {}}
             >
                 <Card
                     sx={{
@@ -84,225 +115,301 @@ const ModernProposalCard = ({ proposal, rank, onVote, votingLocked, sessionLocke
                         backdropFilter: 'blur(10px)',
                         border: isWinning ? '3px solid gold' : '1px solid rgba(255, 255, 255, 0.2)',
                         boxShadow: isWinning ?
-                            '0 20px 60px rgba(255, 215, 0, 0.4)' :
-                            '0 8px 32px rgba(0,0,0,0.08)',
+                            '0 20px 40px rgba(255, 215, 0, 0.3)' :
+                            '0 8px 32px rgba(0, 0, 0, 0.1)',
                         borderRadius: 4,
                         overflow: 'hidden',
-                        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                        transition: 'all 0.3s ease-in-out'
                     }}
                 >
-                    {/* Winner Badge */}
+                    {/* Rank Badge */}
+                    <Box
+                        sx={{
+                            position: 'absolute',
+                            top: 16,
+                            left: 16,
+                            zIndex: 2,
+                            bgcolor: getRankColor(rank),
+                            color: rank <= 3 ? '#000' : '#fff',
+                            borderRadius: '50%',
+                            width: 48,
+                            height: 48,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontWeight: 'bold',
+                            fontSize: '1.2rem',
+                            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)'
+                        }}
+                    >
+                        {getRankEmoji(rank)}
+                    </Box>
+
+                    {/* Winner Trophy */}
                     {isWinning && (
                         <motion.div
-                            initial={{ scale: 0, rotate: -180 }}
-                            animate={{ scale: 1, rotate: 0 }}
-                            transition={{ duration: 0.6, type: 'spring' }}
-                        >
-                            <Box sx={{
+                            animate={{
+                                rotate: [0, -10, 10, -10, 0],
+                                scale: [1, 1.1, 1]
+                            }}
+                            transition={{
+                                duration: 2,
+                                repeat: Infinity,
+                                repeatDelay: 3
+                            }}
+                            style={{
                                 position: 'absolute',
-                                top: -10,
-                                right: -10,
-                                zIndex: 10,
-                                background: 'linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%)',
-                                borderRadius: '50%',
-                                width: 60,
-                                height: 60,
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                boxShadow: '0 8px 25px rgba(255, 107, 107, 0.4)'
-                            }}>
-                                <TrophyIcon sx={{ color: 'white', fontSize: 30 }} />
-                            </Box>
+                                top: 16,
+                                right: 16,
+                                zIndex: 2
+                            }}
+                        >
+                            <TrophyIcon sx={{ fontSize: 40, color: '#ff6b6b' }} />
                         </motion.div>
                     )}
 
-                    <Box sx={{ display: 'flex', minHeight: hasImage ? 180 : 'auto' }}>
-                        {/* Image Section */}
+                    <CardContent sx={{ p: 3 }}>
+                        {/* Restaurant Image */}
                         {hasImage && (
-                            <CardMedia
-                                component="img"
-                                sx={{
-                                    width: 200,
-                                    height: 180,
-                                    objectFit: 'cover',
-                                    borderRadius: '16px 0 0 16px'
-                                }}
-                                image={proposal.imageUrl}
-                                alt={proposal.name}
-                            />
+                            <Box sx={{ mb: 2, borderRadius: 2, overflow: 'hidden' }}>
+                                <CardMedia
+                                    component="img"
+                                    height="200"
+                                    image={proposal.imageUrl}
+                                    alt={proposal.name}
+                                    sx={{
+                                        objectFit: 'cover',
+                                        transition: 'transform 0.3s ease-in-out',
+                                        '&:hover': {
+                                            transform: 'scale(1.05)'
+                                        }
+                                    }}
+                                />
+                            </Box>
                         )}
 
-                        {/* Content Section */}
-                        <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-                            <CardContent sx={{ flex: 1, p: 3 }}>
-                                <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', mb: 2 }}>
-                                    <Box sx={{ flex: 1 }}>
-                                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1, flexWrap: 'wrap', gap: 1 }}>
-                                            <Chip
-                                                label={`#${rank}`}
-                                                size="small"
-                                                sx={{
-                                                    fontWeight: 'bold',
-                                                    bgcolor: isWinning ? 'rgba(0,0,0,0.1)' : 'primary.main',
-                                                    color: isWinning ? 'black' : 'white'
-                                                }}
-                                            />
+                        {/* Restaurant Info */}
+                        <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', mb: 2 }}>
+                            <Box sx={{ flex: 1, mr: 2 }}>
+                                <Typography
+                                    variant="h5"
+                                    component="h2"
+                                    gutterBottom
+                                    sx={{
+                                        fontWeight: 700,
+                                        color: isWinning ? '#000' : 'text.primary',
+                                        lineHeight: 1.2
+                                    }}
+                                >
+                                    {proposal.name}
+                                </Typography>
 
-                                            {proposal.cuisine && (
-                                                <Chip
-                                                    icon={<RestaurantIcon />}
-                                                    label={proposal.cuisine}
-                                                    size="small"
-                                                    variant="outlined"
-                                                    sx={{ fontSize: '0.75rem' }}
-                                                />
-                                            )}
-
-                                            {proposal.priceRange && (
-                                                <Chip
-                                                    icon={<MoneyIcon />}
-                                                    label={proposal.priceRange}
-                                                    size="small"
-                                                    sx={{
-                                                        bgcolor: getPriceColor(proposal.priceRange),
-                                                        color: 'white',
-                                                        fontSize: '0.75rem'
-                                                    }}
-                                                />
-                                            )}
-                                        </Box>
-
-                                        <Typography variant="h5" component="h2" sx={{
-                                            fontWeight: 700,
-                                            color: isWinning ? 'black' : 'inherit',
-                                            mb: 1
-                                        }}>
-                                            {proposal.name}
-                                        </Typography>
-
-                                        <Link
-                                            href={proposal.link}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            sx={{
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                mb: 2,
-                                                textDecoration: 'none',
-                                                color: 'primary.main',
-                                                '&:hover': {
-                                                    textDecoration: 'underline',
-                                                    color: 'primary.dark'
-                                                }
-                                            }}
-                                        >
-                                            <Typography variant="body2" sx={{ mr: 1 }}>
-                                                View Menu & Info
-                                            </Typography>
-                                            <LaunchIcon fontSize="small" />
-                                        </Link>
-                                    </Box>
-
-                                    {/* Vote Display */}
-                                    <Box sx={{ textAlign: 'center', minWidth: 100 }}>
-                                        <motion.div
-                                            animate={{ scale: isVoting ? 1.2 : 1 }}
-                                            transition={{ duration: 0.2 }}
-                                        >
-                                            <Typography
-                                                variant="h3"
-                                                sx={{
-                                                    fontWeight: 'bold',
-                                                    color: proposal.votes > 0 ? '#00d4aa' : 'text.secondary',
-                                                    textShadow: proposal.votes > 10 ? '0 2px 10px rgba(0, 212, 170, 0.3)' : 'none'
-                                                }}
-                                            >
-                                                {proposal.votes}
-                                            </Typography>
-                                        </motion.div>
-                                        <Typography variant="caption" color="text.secondary">
-                                            {proposal.votes === 1 ? 'vote' : 'votes'}
-                                        </Typography>
-                                    </Box>
-                                </Box>
-
-                                {/* Voting Buttons */}
-                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 2 }}>
-                                    <Box sx={{ display: 'flex', gap: 1 }}>
-                                        {!votingLocked && !sessionLocked && (
-                                            <>
-                                                <Tooltip title="Vote up" TransitionComponent={Zoom}>
-                                                    <motion.div
-                                                        whileHover={{ scale: 1.1 }}
-                                                        whileTap={{ scale: 0.9 }}
-                                                    >
-                                                        <IconButton
-                                                            onClick={() => handleVote(1)}
-                                                            disabled={isVoting}
-                                                            sx={{
-                                                                bgcolor: 'success.main',
-                                                                color: 'white',
-                                                                '&:hover': {
-                                                                    bgcolor: 'success.dark',
-                                                                    boxShadow: '0 6px 20px rgba(76, 175, 80, 0.4)'
-                                                                },
-                                                                '&:disabled': {
-                                                                    bgcolor: 'grey.300'
-                                                                }
-                                                            }}
-                                                        >
-                                                            <ThumbUpIcon />
-                                                        </IconButton>
-                                                    </motion.div>
-                                                </Tooltip>
-
-                                                <Tooltip title="Vote down" TransitionComponent={Zoom}>
-                                                    <motion.div
-                                                        whileHover={{ scale: 1.1 }}
-                                                        whileTap={{ scale: 0.9 }}
-                                                    >
-                                                        <IconButton
-                                                            onClick={() => handleVote(-1)}
-                                                            disabled={isVoting || proposal.votes === 0}
-                                                            sx={{
-                                                                bgcolor: 'error.main',
-                                                                color: 'white',
-                                                                '&:hover': {
-                                                                    bgcolor: 'error.dark',
-                                                                    boxShadow: '0 6px 20px rgba(244, 67, 54, 0.4)'
-                                                                },
-                                                                '&:disabled': {
-                                                                    bgcolor: 'grey.300'
-                                                                }
-                                                            }}
-                                                        >
-                                                            <ThumbDownIcon />
-                                                        </IconButton>
-                                                    </motion.div>
-                                                </Tooltip>
-                                            </>
-                                        )}
-                                    </Box>
-
-                                    {(votingLocked || sessionLocked) && (
+                                <Box sx={{ display: 'flex', gap: 1, mb: 2, flexWrap: 'wrap' }}>
+                                    {proposal.cuisine && (
                                         <Chip
-                                            label={sessionLocked ? "Session Locked" : "Voting Locked"}
+                                            label={proposal.cuisine}
                                             size="small"
-                                            color="warning"
-                                            sx={{ fontWeight: 'bold' }}
+                                            sx={{ bgcolor: 'primary.light', color: 'white' }}
                                         />
                                     )}
-
-                                    <Typography variant="caption" color="text.secondary">
-                                        Added {new Date(proposal.createdAt).toLocaleDateString()}
-                                    </Typography>
+                                    {proposal.priceRange && (
+                                        <Chip
+                                            icon={<MoneyIcon />}
+                                            label={proposal.priceRange}
+                                            size="small"
+                                            sx={{
+                                                bgcolor: getPriceColor(proposal.priceRange),
+                                                color: 'white'
+                                            }}
+                                        />
+                                    )}
                                 </Box>
-                            </CardContent>
+
+                                <Link
+                                    href={proposal.link}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    sx={{
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: 1,
+                                        color: isWinning ? '#000' : 'primary.main',
+                                        textDecoration: 'none',
+                                        '&:hover': {
+                                            textDecoration: 'underline'
+                                        }
+                                    }}
+                                >
+                                    Visit Website <LaunchIcon fontSize="small" />
+                                </Link>
+                            </Box>
+
+                            {/* Vote Display */}
+                            <Box sx={{
+                                textAlign: 'center',
+                                minWidth: 80,
+                                bgcolor: 'rgba(0, 0, 0, 0.05)',
+                                borderRadius: 2,
+                                p: 2
+                            }}>
+                                <motion.div
+                                    animate={votes > 10 ? {
+                                        scale: [1, 1.1, 1],
+                                        textShadow: [
+                                            '0 2px 10px rgba(0, 212, 170, 0.3)',
+                                            '0 4px 20px rgba(0, 212, 170, 0.6)',
+                                            '0 2px 10px rgba(0, 212, 170, 0.3)'
+                                        ]
+                                    } : {}}
+                                    transition={{ duration: 1.5, repeat: Infinity }}
+                                >
+                                    <Typography
+                                        variant="h4"
+                                        component="div"
+                                        sx={{
+                                            fontWeight: 800,
+                                            color: votes > 0 ? '#00d4aa' : 'text.secondary',
+                                            textShadow: votes > 10 ? '0 2px 10px rgba(0, 212, 170, 0.3)' : 'none'
+                                        }}
+                                    >
+                                        {votes}
+                                    </Typography>
+                                </motion.div>
+                                <Typography variant="caption" color="text.secondary">
+                                    {votes === 1 ? 'vote' : 'votes'}
+                                </Typography>
+                            </Box>
                         </Box>
-                    </Box>
+
+                        {/* Voting Progress Bar */}
+                        {votes > 0 && (
+                            <Box sx={{ mb: 2 }}>
+                                <LinearProgress
+                                    variant="determinate"
+                                    value={Math.min(votes * 10, 100)} // Scale for visual effect
+                                    sx={{
+                                        height: 6,
+                                        borderRadius: 3,
+                                        bgcolor: 'rgba(0, 0, 0, 0.1)',
+                                        '& .MuiLinearProgress-bar': {
+                                            bgcolor: isWinning ? '#ff6b6b' : '#00d4aa',
+                                            borderRadius: 3
+                                        }
+                                    }}
+                                />
+                            </Box>
+                        )}
+
+                        {/* Voting Buttons */}
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 2 }}>
+                            <Box sx={{ display: 'flex', gap: 1 }}>
+                                {!votingLocked && !sessionLocked ? (
+                                    <>
+                                        <Tooltip title="Vote up" TransitionComponent={Zoom}>
+                                            <motion.div
+                                                whileHover={{ scale: 1.1 }}
+                                                whileTap={{ scale: 0.9 }}
+                                            >
+                                                <IconButton
+                                                    onClick={() => handleVote(1)}
+                                                    disabled={isVoting}
+                                                    sx={{
+                                                        bgcolor: 'success.main',
+                                                        color: 'white',
+                                                        '&:hover': {
+                                                            bgcolor: 'success.dark',
+                                                            boxShadow: '0 6px 20px rgba(76, 175, 80, 0.4)'
+                                                        },
+                                                        '&:disabled': {
+                                                            bgcolor: 'grey.300'
+                                                        }
+                                                    }}
+                                                >
+                                                    <ThumbUpIcon />
+                                                </IconButton>
+                                            </motion.div>
+                                        </Tooltip>
+
+                                        <Tooltip title="Vote down" TransitionComponent={Zoom}>
+                                            <motion.div
+                                                whileHover={{ scale: 1.1 }}
+                                                whileTap={{ scale: 0.9 }}
+                                            >
+                                                <IconButton
+                                                    onClick={() => handleVote(-1)}
+                                                    disabled={isVoting || votes === 0}
+                                                    sx={{
+                                                        bgcolor: 'error.main',
+                                                        color: 'white',
+                                                        '&:hover': {
+                                                            bgcolor: 'error.dark',
+                                                            boxShadow: '0 6px 20px rgba(244, 67, 54, 0.4)'
+                                                        },
+                                                        '&:disabled': {
+                                                            bgcolor: 'grey.300'
+                                                        }
+                                                    }}
+                                                >
+                                                    <ThumbDownIcon />
+                                                </IconButton>
+                                            </motion.div>
+                                        </Tooltip>
+                                    </>
+                                ) : (
+                                    <Chip
+                                        label={sessionLocked ? "Session Locked" : "Voting Locked"}
+                                        size="small"
+                                        color="warning"
+                                        icon={<RestaurantIcon />}
+                                    />
+                                )}
+                            </Box>
+
+                            {/* Status Indicators */}
+                            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                                {isVoting && (
+                                    <Chip
+                                        label="Processing..."
+                                        size="small"
+                                        color="info"
+                                        sx={{ animation: 'pulse 1.5s ease-in-out infinite' }}
+                                    />
+                                )}
+                                {isWinning && (
+                                    <motion.div
+                                        animate={{
+                                            scale: [1, 1.1, 1],
+                                            rotate: [0, 5, -5, 0]
+                                        }}
+                                        transition={{
+                                            duration: 2,
+                                            repeat: Infinity,
+                                            repeatDelay: 3
+                                        }}
+                                    >
+                                        <Chip
+                                            label="Leading!"
+                                            size="small"
+                                            sx={{
+                                                bgcolor: '#ff6b6b',
+                                                color: 'white',
+                                                fontWeight: 'bold'
+                                            }}
+                                        />
+                                    </motion.div>
+                                )}
+                            </Box>
+                        </Box>
+                    </CardContent>
                 </Card>
             </motion.div>
+
+            <style jsx>{`
+                @keyframes pulse {
+                    0%, 100% { opacity: 1; }
+                    50% { opacity: 0.5; }
+                }
+            `}</style>
         </>
     );
 };

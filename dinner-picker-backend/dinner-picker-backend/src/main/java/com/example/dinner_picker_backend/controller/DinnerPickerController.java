@@ -155,26 +155,11 @@ public class DinnerPickerController {
 
     // Vote for an option
     @PostMapping("/options/{optionId}/vote")
-    public ResponseEntity<?> vote(@PathVariable Long optionId, @Valid @RequestBody VoteRequest request, BindingResult bindingResult) {
+    public ResponseEntity<?> vote(@PathVariable Long optionId, @RequestBody Map<String, Integer> requestBody) {
         Map<String, Object> response = new HashMap<>();
 
         try {
-            logger.info("Processing vote for option ID: {} with delta: {}", optionId, request.getDelta());
-
-            // Handle validation errors
-            if (bindingResult.hasErrors()) {
-                Map<String, String> errors = new HashMap<>();
-
-                for (FieldError error : bindingResult.getFieldErrors()) {
-                    errors.put(error.getField(), error.getDefaultMessage());
-                }
-
-                response.put("success", false);
-                response.put("error", "Validation failed");
-                response.put("errors", errors);
-
-                return ResponseEntity.badRequest().body(response);
-            }
+            logger.info("Processing vote for option ID: {} with request: {}", optionId, requestBody);
 
             if (optionId == null || optionId <= 0) {
                 response.put("success", false);
@@ -182,7 +167,14 @@ public class DinnerPickerController {
                 return ResponseEntity.badRequest().body(response);
             }
 
-            dinnerPickerService.vote(optionId, request.getDelta());
+            Integer delta = requestBody.get("delta");
+            if (delta == null) {
+                response.put("success", false);
+                response.put("error", "Delta is required");
+                return ResponseEntity.badRequest().body(response);
+            }
+
+            dinnerPickerService.vote(optionId, delta);
 
             logger.info("Successfully processed vote for option ID: {}", optionId);
 
@@ -207,8 +199,42 @@ public class DinnerPickerController {
 
     // Legacy vote endpoint (for backward compatibility)
     @PostMapping("/vote")
-    public ResponseEntity<?> legacyVote(@Valid @RequestBody VoteRequest request) {
-        return vote(request.getOptionId(), request, null);
+    public ResponseEntity<?> legacyVote(@RequestBody Map<String, Object> requestBody) {
+        try {
+            Long optionId = null;
+            Integer delta = null;
+
+            // Handle different request formats
+            if (requestBody.containsKey("optionId")) {
+                Object optionIdObj = requestBody.get("optionId");
+                if (optionIdObj instanceof Number) {
+                    optionId = ((Number) optionIdObj).longValue();
+                }
+            }
+
+            if (requestBody.containsKey("delta")) {
+                Object deltaObj = requestBody.get("delta");
+                if (deltaObj instanceof Number) {
+                    delta = ((Number) deltaObj).intValue();
+                }
+            }
+
+            if (optionId == null || delta == null) {
+                Map<String, Object> errorResponse = new HashMap<>();
+                errorResponse.put("success", false);
+                errorResponse.put("error", "optionId and delta are required");
+                return ResponseEntity.badRequest().body(errorResponse);
+            }
+
+            return vote(optionId, Map.of("delta", delta));
+
+        } catch (Exception e) {
+            logger.error("Error in legacy vote endpoint: ", e);
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("success", false);
+            errorResponse.put("error", "Failed to process legacy vote");
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+        }
     }
 
     // Lock voting globally

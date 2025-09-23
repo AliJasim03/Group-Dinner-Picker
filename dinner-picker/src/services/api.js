@@ -10,32 +10,33 @@ const api = axios.create({
     timeout: 10000, // 10 seconds timeout
 });
 
-// Request interceptor for logging
+// Request interceptor for logging and debugging
 api.interceptors.request.use(
     (config) => {
-        console.log(`[API] ${config.method?.toUpperCase()} ${config.url}`);
+        console.log(`[API Request] ${config.method?.toUpperCase()} ${config.url}`, config.data);
         return config;
     },
     (error) => {
-        console.error('[API] Request error:', error);
+        console.error('[API Request Error]:', error);
         return Promise.reject(error);
     }
 );
 
-// Response interceptor for consistent error handling
+// Response interceptor for consistent error handling and data format
 api.interceptors.response.use(
     (response) => {
-        console.log(`[API] Response: ${response.status} ${response.config.url}`);
+        console.log(`[API Response] ${response.status} ${response.config.url}`, response.data);
         return response;
     },
     (error) => {
-        console.error('[API] Response error:', error);
+        console.error('[API Response Error]:', error);
 
         // Handle network errors
         if (!error.response) {
             return Promise.reject({
                 message: 'Network error. Please check your connection.',
-                type: 'NETWORK_ERROR'
+                type: 'NETWORK_ERROR',
+                originalError: error
             });
         }
 
@@ -43,7 +44,8 @@ api.interceptors.response.use(
         if (error.code === 'ECONNABORTED') {
             return Promise.reject({
                 message: 'Request timeout. Please try again.',
-                type: 'TIMEOUT_ERROR'
+                type: 'TIMEOUT_ERROR',
+                originalError: error
             });
         }
 
@@ -55,6 +57,16 @@ api.interceptors.response.use(
             errorMessage = data.error;
         } else if (data?.message) {
             errorMessage = data.message;
+        } else if (status === 400) {
+            errorMessage = 'Invalid request data';
+        } else if (status === 401) {
+            errorMessage = 'Unauthorized access';
+        } else if (status === 403) {
+            errorMessage = 'Access forbidden';
+        } else if (status === 404) {
+            errorMessage = 'Resource not found';
+        } else if (status >= 500) {
+            errorMessage = 'Server error. Please try again later.';
         }
 
         return Promise.reject({
@@ -66,19 +78,24 @@ api.interceptors.response.use(
     }
 );
 
+// Helper function to normalize response data format
+const normalizeResponse = (response) => {
+    // Handle both old format (direct array/object) and new format (with success flag)
+    if (response.data.success !== undefined) {
+        return {
+            ...response,
+            data: response.data.data || response.data
+        };
+    }
+    return response;
+};
+
 // Groups API
 export const groupAPI = {
     getAllGroups: async () => {
         try {
             const response = await api.get('/api/groups');
-            // Handle both old format (direct array) and new format (with success flag)
-            if (response.data.success) {
-                return {
-                    ...response,
-                    data: response.data.data || response.data
-                };
-            }
-            return response;
+            return normalizeResponse(response);
         } catch (error) {
             throw error;
         }
@@ -89,14 +106,7 @@ export const groupAPI = {
 
         try {
             const response = await api.get(`/api/groups/${id}`);
-            // Handle both old format and new format
-            if (response.data.success) {
-                return {
-                    ...response,
-                    data: response.data.data || response.data
-                };
-            }
-            return response;
+            return normalizeResponse(response);
         } catch (error) {
             throw error;
         }
@@ -129,14 +139,7 @@ export const groupAPI = {
 
         try {
             const response = await api.get(`/api/groups/user/${userId}`);
-            // Handle both old format and new format
-            if (response.data.success) {
-                return {
-                    ...response,
-                    data: response.data.data || response.data
-                };
-            }
-            return response;
+            return normalizeResponse(response);
         } catch (error) {
             throw error;
         }
@@ -180,7 +183,7 @@ export const sessionAPI = {
 
         try {
             const response = await api.get(`/api/sessions/group/${groupId}`);
-            return response;
+            return normalizeResponse(response);
         } catch (error) {
             throw error;
         }
@@ -191,7 +194,7 @@ export const sessionAPI = {
 
         try {
             const response = await api.get(`/api/sessions/${id}`);
-            return response;
+            return normalizeResponse(response);
         } catch (error) {
             throw error;
         }
@@ -217,6 +220,7 @@ export const sessionAPI = {
 
     lockSession: async (id, locked) => {
         if (!id) throw new Error('Session ID is required');
+        if (typeof locked !== 'boolean') throw new Error('Lock status must be boolean');
 
         try {
             const response = await api.post(`/api/sessions/${id}/lock`, { locked });
@@ -234,7 +238,7 @@ export const optionAPI = {
 
         try {
             const response = await api.get(`/api/sessions/${sessionId}/options`);
-            return response;
+            return normalizeResponse(response);
         } catch (error) {
             throw error;
         }
@@ -265,10 +269,20 @@ export const optionAPI = {
             throw new Error('Vote delta is required');
         }
 
+        if (!Number.isInteger(delta)) {
+            throw new Error('Vote delta must be an integer');
+        }
+
         try {
+            console.log(`[Voting] Option ${optionId}, Delta: ${delta}`);
+
             const response = await api.post(`/api/options/${optionId}/vote`, { delta });
+
+            console.log(`[Vote Response]`, response.data);
             return response;
+
         } catch (error) {
+            console.error(`[Vote Error]`, error);
             throw error;
         }
     }
@@ -279,7 +293,7 @@ export const apiUtils = {
     // Check if the API is reachable
     healthCheck: async () => {
         try {
-            const response = await api.get('/api/health');
+            const response = await api.get('/api/status');
             return response.data;
         } catch (error) {
             throw error;
@@ -300,6 +314,23 @@ export const apiUtils = {
             return response;
         } catch (error) {
             throw error;
+        }
+    },
+
+    // Retry mechanism for failed requests
+    retryRequest: async (requestFn, maxRetries = 3, delay = 1000) => {
+        for (let attempt = 1; attempt <= maxRetries; attempt++) {
+            try {
+                return await requestFn();
+            } catch (error) {
+                if (attempt === maxRetries) {
+                    throw error;
+                }
+
+                console.log(`Request attempt ${attempt} failed, retrying in ${delay}ms...`);
+                await new Promise(resolve => setTimeout(resolve, delay));
+                delay *= 2; // Exponential backoff
+            }
         }
     }
 };
