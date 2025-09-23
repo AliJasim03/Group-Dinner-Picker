@@ -45,7 +45,7 @@ const QuickActions = ({ quickActions }) => {
                                 background: 'rgba(255, 255, 255, 0.95)',
                                 backdropFilter: 'blur(10px)',
                                 border: '1px solid rgba(255, 255, 255, 0.2)',
-                                borderRadius: 4,
+                                borderRadius: 3,
                                 transition: 'all 0.3s ease-in-out',
                                 height: '100%',
                                 '&:hover': {

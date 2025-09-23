@@ -10,7 +10,7 @@ const RecentActivity = ({ recentActivity, onViewAllGroups }) => {
             background: 'rgba(255, 255, 255, 0.95)',
             backdropFilter: 'blur(10px)',
             border: '1px solid rgba(255, 255, 255, 0.2)',
-            borderRadius: 4
+            borderRadius: 2
         }}>
             <CardContent>
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
