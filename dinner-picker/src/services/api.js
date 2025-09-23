@@ -232,7 +232,6 @@ export const sessionAPI = {
 };
 
 // Options API
-// need implementation in spring
 export const optionAPI = {
     getSessionOptions: async (sessionId) => {
         if (!sessionId) throw new Error('Session ID is required');
