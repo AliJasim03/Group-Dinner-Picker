@@ -1,5 +1,6 @@
 package com.example.dinner_picker_backend.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -36,6 +37,7 @@ public class Option {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "voting_session_id")
+    @JsonIgnore
     private VotingSession votingSession;
 
     // Constructors
