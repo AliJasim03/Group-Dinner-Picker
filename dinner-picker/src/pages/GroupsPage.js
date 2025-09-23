@@ -9,7 +9,6 @@ import {
     Button,
     Avatar,
     Chip,
-    Fab,
     TextField,
     InputAdornment,
     Skeleton
@@ -25,6 +24,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { groupAPI } from '../services/api';
 import toast from 'react-hot-toast';
+import FloatingActionButton from '../components/FloatingActionButton';
 
 const GroupsPage = () => {
     const [groups, setGroups] = useState([]);
@@ -309,19 +309,10 @@ const GroupsPage = () => {
                 </Box>
             </motion.div>
 
-            <Fab
-                color="primary"
-                aria-label="add group"
-                sx={{
-                    position: 'fixed',
-                    bottom: 24,
-                    right: 24,
-                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                }}
+            <FloatingActionButton
                 onClick={() => navigate('/groups/create')}
-            >
-                <AddIcon />
-            </Fab>
+                ariaLabel="add group"
+            />
         </Container>
     );
 };

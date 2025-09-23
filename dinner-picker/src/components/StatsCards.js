@@ -22,7 +22,8 @@ const StatsCards = ({ stats }) => {
             icon: <TrophyIcon sx={{ fontSize: 40, mb: 2 }} />,
             value: stats.weeklyWins,
             label: 'Weekly Wins',
-            background: '#00f2fe'
+            //background: '#71c5c9'
+            background: '#71c9c2'
         }
     ];
 
@@ -47,10 +48,10 @@ const StatsCards = ({ stats }) => {
                     }}>
                         <CardContent sx={{ textAlign: 'center', py: 3 }}>
                             {stat.icon}
-                            <Typography variant="h3" component="div" gutterBottom>
+                            <Typography variant="h3" component="div" gutterBottom color='#f7f5ed'>
                                 {stat.value}
                             </Typography>
-                            <Typography variant="body1">
+                            <Typography variant="body1"  color='#f7f5ed'>
                                 {stat.label}
                             </Typography>
                         </CardContent>

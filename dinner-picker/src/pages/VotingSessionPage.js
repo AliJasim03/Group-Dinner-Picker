@@ -8,7 +8,6 @@ import {
     Button,
     Chip,
     Avatar,
-    Fab,
     LinearProgress,
     Alert,
     Snackbar
@@ -31,6 +30,7 @@ import Confetti from 'react-confetti';
 import ModernProposalCard from '../components/ModernProposalCard';
 import { sessionAPI, optionAPI } from '../services/api';
 import LockSessionDialog from '../dialogs/LockSessionDialog';
+import FloatingActionButton from '../components/FloatingActionButton';
 
 const VotingSessionPage = () => {
     const { sessionId } = useParams();
@@ -511,21 +511,11 @@ const VotingSessionPage = () => {
             </motion.div>
 
             {/* Add Restaurant FAB */}
-            {!isSessionLocked && (
-                <Fab
-                    color="primary"
-                    aria-label="add restaurant"
-                    sx={{
-                        position: 'fixed',
-                        bottom: 24,
-                        right: 24,
-                        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                    }}
-                    onClick={() => navigate(`/sessions/${sessionId}/add`)}
-                >
-                    <AddIcon />
-                </Fab>
-            )}
+            <FloatingActionButton
+                onClick={() => navigate(`/sessions/${sessionId}/add`)}
+                ariaLabel="add restaurant"
+                visible={!isSessionLocked}
+            />
 
             <LockSessionDialog
                 open={lockDialogOpen}

@@ -117,33 +117,12 @@ const ModernProposalCard = ({ proposal, rank, onVote, votingLocked, sessionLocke
                         boxShadow: isWinning ?
                             '0 20px 40px rgba(255, 215, 0, 0.3)' :
                             '0 8px 32px rgba(0, 0, 0, 0.1)',
-                        borderRadius: 4,
+                        borderRadius: 2,
                         overflow: 'hidden',
                         transition: 'all 0.3s ease-in-out'
                     }}
                 >
-                    {/* Rank Badge */}
-                    <Box
-                        sx={{
-                            position: 'absolute',
-                            top: 16,
-                            left: 16,
-                            zIndex: 2,
-                            bgcolor: getRankColor(rank),
-                            color: rank <= 3 ? '#000' : '#fff',
-                            borderRadius: '50%',
-                            width: 48,
-                            height: 48,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            fontWeight: 'bold',
-                            fontSize: '1.2rem',
-                            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)'
-                        }}
-                    >
-                        {getRankEmoji(rank)}
-                    </Box>
+
 
                     {/* Winner Trophy */}
                     {isWinning && (
@@ -198,10 +177,31 @@ const ModernProposalCard = ({ proposal, rank, onVote, votingLocked, sessionLocke
                                     sx={{
                                         fontWeight: 700,
                                         color: isWinning ? '#000' : 'text.primary',
-                                        lineHeight: 1.2
+                                        lineHeight: 1.2,
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: 1
                                     }}
                                 >
                                     {proposal.name}
+                                    <Box
+                                        sx={{
+                                            bgcolor: getRankColor(rank),
+                                            color: rank <= 3 ? '#000' : '#fff',
+                                            borderRadius: '50%',
+                                            width: 32,
+                                            height: 32,
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            fontWeight: 'bold',
+                                            fontSize: '0.9rem',
+                                            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)',
+                                            flexShrink: 0
+                                        }}
+                                    >
+                                        {getRankEmoji(rank)}
+                                    </Box>
                                 </Typography>
 
                                 <Box sx={{ display: 'flex', gap: 1, mb: 2, flexWrap: 'wrap' }}>

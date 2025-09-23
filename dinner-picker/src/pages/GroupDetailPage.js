@@ -3,8 +3,7 @@ import {
     Container,
     Typography,
     Box,
-    Button,
-    Fab
+    Button
 } from '@mui/material';
 import {
     ArrowBack as ArrowBackIcon,
@@ -22,6 +21,7 @@ import ActiveSessionsTab from '../components/ActiveSessionsTab';
 import HistoryTab from '../components/HistoryTab';
 import MembersTab from '../components/MembersTab';
 import GroupDetailSkeleton from '../components/GroupDetailSkeleton';
+import FloatingActionButton from '../components/FloatingActionButton';
 
 const GroupDetailPage = () => {
     const { groupId } = useParams();
@@ -168,19 +168,10 @@ const GroupDetailPage = () => {
                 </Box>
             </motion.div>
 
-            <Fab
-                color="primary"
-                aria-label="create session"
-                sx={{
-                    position: 'fixed',
-                    bottom: 24,
-                    right: 24,
-                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                }}
+            <FloatingActionButton
                 onClick={() => navigate(`/groups/${groupId}/sessions/create`)}
-            >
-                <AddIcon />
-            </Fab>
+                ariaLabel="create session"
+            />
         </Container>
     );
 };
