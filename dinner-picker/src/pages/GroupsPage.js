@@ -35,7 +35,9 @@ const GroupsPage = () => {
     const fetchGroups = async () => {
         try {
             setLoading(true);
-            const response = await groupAPI.getAllGroups();
+            // Assuming single user application with userId = 1
+            const userId = 1;
+            const response = await groupAPI.getUserGroups(userId);
             setGroups(response.data);
         } catch (error) {
             toast.error('Failed to load groups');
@@ -59,6 +61,39 @@ const GroupsPage = () => {
         const memberCount = group.members?.length || 0;
 
         return { activeVotes, totalSessions, memberCount };
+    };
+
+    // Function to determine if a color is light or dark
+    const isLightColor = (hexColor) => {
+        if (!hexColor) return false;
+        
+        // Remove # if present
+        const color = hexColor.replace('#', '');
+        
+        // Convert to RGB
+        const r = parseInt(color.substr(0, 2), 16);
+        const g = parseInt(color.substr(2, 2), 16);
+        const b = parseInt(color.substr(4, 2), 16);
+        
+        // Calculate relative luminance using W3C formula
+        const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+        
+        // Return true only for very light colors (luminance > 0.8)
+        return luminance > 0.8;
+    };
+
+    // Get appropriate text colors based on background
+    const getTextColors = (colorTheme) => {
+        const isLight = isLightColor(colorTheme);
+        
+        return {
+            primary: isLight ? '#1a1a1a' : 'white',
+            secondary: isLight ? 'rgba(0, 0, 0, 0.7)' : 'rgba(255, 255, 255, 0.9)',
+            caption: isLight ? 'rgba(0, 0, 0, 0.6)' : 'rgba(255, 255, 255, 0.8)',
+            chipText: isLight ? '#1a1a1a' : 'white',
+            chipBg: isLight ? 'rgba(0, 0, 0, 0.1)' : 'rgba(255, 255, 255, 0.2)',
+            activeBg: isLight ? 'rgba(76, 175, 80, 0.8)' : 'rgba(76, 217, 100, 0.8)'
+        };
     };
 
     if (loading) {
@@ -166,6 +201,7 @@ const GroupsPage = () => {
                         <Grid container spacing={3}>
                             {filteredGroups.map((group, index) => {
                                 const stats = getGroupStats(group);
+                                const textColors = getTextColors(group.colorTheme);
 
                                 return (
                                     <Grid item xs={12} md={6} lg={4} key={group.id}>
@@ -180,7 +216,7 @@ const GroupsPage = () => {
                                                     cursor: 'pointer',
                                                     height: '100%',
                                                     background: `linear-gradient(135deg, ${group.colorTheme || '#f2ecd8'} 0%, ${group.colorTheme || '#f0e9f7'} 100%)`,
-                                                    color: 'white',
+                                                    color: textColors.primary,
                                                     position: 'relative',
                                                     overflow: 'hidden',
                                                     '&::before': {
@@ -199,7 +235,10 @@ const GroupsPage = () => {
                                                 <CardContent sx={{ position: 'relative', zIndex: 1, p: 3 }}>
                                                     <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 3 }}>
                                                         <Avatar sx={{
-                                                            bgcolor: 'rgba(255, 255, 255, 0.2)',
+                                                            bgcolor: isLightColor(group.colorTheme) 
+                                                                ? 'rgba(0, 0, 0, 0.1)' 
+                                                                : 'rgba(255, 255, 255, 0.2)',
+                                                            color: textColors.primary,
                                                             width: 60,
                                                             height: 60,
                                                             fontSize: 30,
@@ -208,10 +247,16 @@ const GroupsPage = () => {
                                                             {group.emojiIcon || '🍽️'}
                                                         </Avatar>
                                                         <Box sx={{ flex: 1 }}>
-                                                            <Typography variant="h6" gutterBottom sx={{ fontWeight: 700 }}>
+                                                            <Typography variant="h6" gutterBottom sx={{ 
+                                                                fontWeight: 700,
+                                                                color: textColors.primary 
+                                                            }}>
                                                                 {group.name}
                                                             </Typography>
-                                                            <Typography variant="body2" sx={{ opacity: 0.9, mb: 2 }}>
+                                                            <Typography variant="body2" sx={{ 
+                                                                color: textColors.secondary, 
+                                                                mb: 2 
+                                                            }}>
                                                                 {group.description || 'No description'}
                                                             </Typography>
                                                         </Box>
@@ -223,9 +268,9 @@ const GroupsPage = () => {
                                                             label={`${stats.memberCount} members`}
                                                             size="small"
                                                             sx={{
-                                                                bgcolor: 'rgba(255, 255, 255, 0.2)',
-                                                                color: 'white',
-                                                                '& .MuiChip-icon': { color: 'white' }
+                                                                bgcolor: textColors.chipBg,
+                                                                color: textColors.chipText,
+                                                                '& .MuiChip-icon': { color: textColors.chipText }
                                                             }}
                                                         />
                                                         <Chip
@@ -233,9 +278,9 @@ const GroupsPage = () => {
                                                             label={`${stats.activeVotes} active`}
                                                             size="small"
                                                             sx={{
-                                                                bgcolor: stats.activeVotes > 0 ? 'rgba(76, 217, 100, 0.8)' : 'rgba(255, 255, 255, 0.2)',
-                                                                color: 'white',
-                                                                '& .MuiChip-icon': { color: 'white' }
+                                                                bgcolor: stats.activeVotes > 0 ? textColors.activeBg : textColors.chipBg,
+                                                                color: textColors.chipText,
+                                                                '& .MuiChip-icon': { color: textColors.chipText }
                                                             }}
                                                         />
                                                         <Chip
@@ -243,14 +288,14 @@ const GroupsPage = () => {
                                                             label={`${stats.totalSessions} total`}
                                                             size="small"
                                                             sx={{
-                                                                bgcolor: 'rgba(255, 255, 255, 0.2)',
-                                                                color: 'white',
-                                                                '& .MuiChip-icon': { color: 'white' }
+                                                                bgcolor: textColors.chipBg,
+                                                                color: textColors.chipText,
+                                                                '& .MuiChip-icon': { color: textColors.chipText }
                                                             }}
                                                         />
                                                     </Box>
 
-                                                    <Typography variant="caption" sx={{ opacity: 0.8 }}>
+                                                    <Typography variant="caption" sx={{ color: textColors.caption }}>
                                                         Created {new Date(group.createdAt).toLocaleDateString()}
                                                     </Typography>
                                                 </CardContent>

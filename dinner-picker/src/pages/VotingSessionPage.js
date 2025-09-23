@@ -43,6 +43,38 @@ const VotingSessionPage = () => {
     const [votingInProgress, setVotingInProgress] = useState(false);
     const navigate = useNavigate();
 
+    // Function to determine if a color is light or dark
+    const isLightColor = (hexColor) => {
+        if (!hexColor) return true; // Default light background
+        
+        // Remove # if present
+        const color = hexColor.replace('#', '');
+        
+        // Convert to RGB
+        const r = parseInt(color.substr(0, 2), 16);
+        const g = parseInt(color.substr(2, 2), 16);
+        const b = parseInt(color.substr(4, 2), 16);
+        
+        // Calculate relative luminance using W3C formula
+        const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+        
+        // Return true only for very light colors (luminance > 0.8)
+        return luminance > 0.8;
+    };
+
+    const getHeaderColors = (colorTheme) => {
+        const isLight = isLightColor(colorTheme);
+        
+        return {
+            text: isLight ? '#1a1a1a' : 'white',
+            chipBg: isLight ? 'rgba(0, 0, 0, 0.1)' : 'rgba(255, 255, 255, 0.2)',
+            chipText: isLight ? '#1a1a1a' : 'white',
+            avatarBg: isLight ? 'rgba(0, 0, 0, 0.1)' : 'rgba(255, 255, 255, 0.2)',
+            buttonBg: isLight ? 'rgba(0, 0, 0, 0.1)' : 'rgba(255, 255, 255, 0.2)',
+            buttonHover: isLight ? 'rgba(0, 0, 0, 0.2)' : 'rgba(255, 255, 255, 0.3)'
+        };
+    };
+
     const fetchSessionData = useCallback(async (showLoadingState = true) => {
         try {
             if (showLoadingState) {
@@ -180,6 +212,7 @@ const VotingSessionPage = () => {
     const winner = sortedOptions.length > 0 && sortedOptions[0].votes > 0 ? sortedOptions[0] : null;
     const hasDeadlinePassed = session?.deadline && new Date(session.deadline) < new Date();
     const isSessionLocked = session?.locked || hasDeadlinePassed;
+    const headerColors = getHeaderColors(session?.group?.colorTheme);
 
     if (loading) {
         return (
@@ -254,26 +287,34 @@ const VotingSessionPage = () => {
                         mb: 4,
                         background: session.group?.colorTheme ?
                             `linear-gradient(135deg, ${session.group.colorTheme} 0%, ${session.group.colorTheme}90 100%)` :
-                            'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                        color: 'white',
+                            'linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)',
+                        color: headerColors.text,
                         position: 'relative',
                         overflow: 'hidden'
                     }}>
                         <CardContent sx={{ p: 4 }}>
                             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 3 }}>
                                 <Box sx={{ flex: 1 }}>
-                                    <Typography variant="h3" gutterBottom sx={{ fontWeight: 700 }}>
+                                    <Typography variant="h3" gutterBottom sx={{ 
+                                        fontWeight: 700,
+                                        color: headerColors.text 
+                                    }}>
                                         {session.title}
                                     </Typography>
                                     {session.description && (
-                                        <Typography variant="h6" sx={{ opacity: 0.9, mb: 2 }}>
+                                        <Typography variant="h6" sx={{ 
+                                            color: headerColors.text, 
+                                            opacity: 0.8, 
+                                            mb: 2 
+                                        }}>
                                             {session.description}
                                         </Typography>
                                     )}
                                 </Box>
 
                                 <Avatar sx={{
-                                    bgcolor: 'rgba(255, 255, 255, 0.2)',
+                                    bgcolor: headerColors.avatarBg,
+                                    color: headerColors.text,
                                     width: 80,
                                     height: 80,
                                     fontSize: 40,
@@ -287,26 +328,41 @@ const VotingSessionPage = () => {
                                 <Chip
                                     icon={<PollIcon />}
                                     label={`${totalVotes} Total Votes`}
-                                    sx={{ bgcolor: 'rgba(255, 255, 255, 0.2)', color: 'white' }}
+                                    sx={{ 
+                                        bgcolor: headerColors.chipBg, 
+                                        color: headerColors.chipText,
+                                        '& .MuiChip-icon': { color: headerColors.chipText }
+                                    }}
                                 />
                                 <Chip
                                     icon={<GroupIcon />}
                                     label={`${options.length} Options`}
-                                    sx={{ bgcolor: 'rgba(255, 255, 255, 0.2)', color: 'white' }}
+                                    sx={{ 
+                                        bgcolor: headerColors.chipBg, 
+                                        color: headerColors.chipText,
+                                        '& .MuiChip-icon': { color: headerColors.chipText }
+                                    }}
                                 />
                                 {session.deadline && (
                                     <Chip
                                         icon={<ScheduleIcon />}
                                         label={hasDeadlinePassed ? 'Deadline Passed' : `Ends ${new Date(session.deadline).toLocaleDateString()}`}
                                         color={hasDeadlinePassed ? 'error' : 'default'}
-                                        sx={{ bgcolor: 'rgba(255, 255, 255, 0.2)', color: 'white' }}
+                                        sx={{ 
+                                            bgcolor: headerColors.chipBg, 
+                                            color: headerColors.chipText,
+                                            '& .MuiChip-icon': { color: headerColors.chipText }
+                                        }}
                                     />
                                 )}
                             </Box>
 
                             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                 <Box>
-                                    <Typography variant="body2" sx={{ opacity: 0.8 }}>
+                                    <Typography variant="body2" sx={{ 
+                                        color: headerColors.text, 
+                                        opacity: 0.7 
+                                    }}>
                                         Created {new Date(session.createdAt).toLocaleDateString()}
                                     </Typography>
                                 </Box>
@@ -316,10 +372,10 @@ const VotingSessionPage = () => {
                                     startIcon={isSessionLocked ? <LockIcon /> : <UnlockIcon />}
                                     onClick={() => setLockDialogOpen(true)}
                                     sx={{
-                                        bgcolor: 'rgba(255, 255, 255, 0.2)',
-                                        color: 'white',
+                                        bgcolor: headerColors.buttonBg,
+                                        color: headerColors.text,
                                         '&:hover': {
-                                            bgcolor: 'rgba(255, 255, 255, 0.3)',
+                                            bgcolor: headerColors.buttonHover,
                                         }
                                     }}
                                 >
