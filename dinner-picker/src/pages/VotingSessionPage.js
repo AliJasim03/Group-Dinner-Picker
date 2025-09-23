@@ -100,7 +100,7 @@ const VotingSessionPage = () => {
     useEffect(() => {
         fetchSessionData();
         // Set up polling for real-time updates
-        const interval = setInterval(fetchSessionData, 10000); // Poll every 10 seconds
+        const interval = setInterval(fetchSessionData, 100000); // Poll every 100 seconds
         return () => clearInterval(interval);
     }, [sessionId]);
 
@@ -372,7 +372,7 @@ const VotingSessionPage = () => {
                                 <Typography variant="h5" gutterBottom sx={{ color: 'white', mb: 3 }}>
                                     🏆 Current Rankings ({totalVotes} total votes)
                                 </Typography>
-
+                                    {/** TODO : fix ranking display, the winning proposal is highlighted but  */}
                                 {sortedOptions.map((option, index) => (
                                     <ModernProposalCard
                                         key={option.id}

@@ -34,7 +34,7 @@ const HomePage = () => {
     const [recentActivity, setRecentActivity] = useState([]);
     const [loading, setLoading] = useState(true);
     const navigate = useNavigate();
-
+    // TODO : fetch real data from backend
     useEffect(() => {
         // Simulate loading recent activity
         setTimeout(() => {
@@ -135,67 +135,71 @@ const HomePage = () => {
                         </Typography>
 
                         {/* Stats Cards */}
-                        <Grid container spacing={3} sx={{ mb: 6 }}>
-                            <Grid item xs={12} md={4}>
-                                <motion.div whileHover={{ scale: 1.05 }}>
-                                    <Card sx={{
-                                        background: theme.palette.primary.light,
-                                        color: 'white',
-                                        height: '100%'
-                                    }}>
-                                        <CardContent sx={{ textAlign: 'center', py: 3 }}>
-                                            <PollIcon sx={{ fontSize: 40, mb: 2 }} />
-                                            <Typography variant="h3" component="div" gutterBottom>
-                                                {stats.activeVotes}
-                                            </Typography>
-                                            <Typography variant="body1">
-                                                Active Votes
-                                            </Typography>
-                                        </CardContent>
-                                    </Card>
-                                </motion.div>
-                            </Grid>
+                        <Box sx={{ 
+                            display: 'flex', 
+                            justifyContent: 'center',
+                            gap: 3, 
+                            mb: 6,
+                            flexWrap: 'wrap',
+                            '& > *': {
+                                flex: '0 1 280px',
+                                maxWidth: '320px'
+                            }
+                        }}>
+                            <motion.div whileHover={{ scale: 1.05 }}>
+                                <Card sx={{
+                                    background: theme.palette.primary.light,
+                                    color: 'white',
+                                    height: '100%'
+                                }}>
+                                    <CardContent sx={{ textAlign: 'center', py: 3 }}>
+                                        <PollIcon sx={{ fontSize: 40, mb: 2 }} />
+                                        <Typography variant="h3" component="div" gutterBottom>
+                                            {stats.activeVotes}
+                                        </Typography>
+                                        <Typography variant="body1">
+                                            Active Votes
+                                        </Typography>
+                                    </CardContent>
+                                </Card>
+                            </motion.div>
 
-                            <Grid item xs={12} md={4}>
-                                <motion.div whileHover={{ scale: 1.05 }}>
-                                    <Card sx={{
-                                        background: theme.palette.secondary.main,
-                                        color: 'white',
-                                        height: '100%'
-                                    }}>
-                                        <CardContent sx={{ textAlign: 'center', py: 3 }}>
-                                            <GroupIcon sx={{ fontSize: 40, mb: 2 }} />
-                                            <Typography variant="h3" component="div" gutterBottom>
-                                                {stats.totalGroups}
-                                            </Typography>
-                                            <Typography variant="body1">
-                                                Your Groups
-                                            </Typography>
-                                        </CardContent>
-                                    </Card>
-                                </motion.div>
-                            </Grid>
+                            <motion.div whileHover={{ scale: 1.05 }}>
+                                <Card sx={{
+                                    background: theme.palette.secondary.main,
+                                    color: 'white',
+                                    height: '100%'
+                                }}>
+                                    <CardContent sx={{ textAlign: 'center', py: 3 }}>
+                                        <GroupIcon sx={{ fontSize: 40, mb: 2 }} />
+                                        <Typography variant="h3" component="div" gutterBottom>
+                                            {stats.totalGroups}
+                                        </Typography>
+                                        <Typography variant="body1">
+                                            Your Groups
+                                        </Typography>
+                                    </CardContent>
+                                </Card>
+                            </motion.div>
 
-                            <Grid item xs={12} md={4}>
-                                <motion.div whileHover={{ scale: 1.05 }}>
-                                    <Card sx={{
-                                        background: '#00f2fe',
-                                        color: 'white',
-                                        height: '100%'
-                                    }}>
-                                        <CardContent sx={{ textAlign: 'center', py: 3 }}>
-                                            <TrophyIcon sx={{ fontSize: 40, mb: 2 }} />
-                                            <Typography variant="h3" component="div" gutterBottom>
-                                                {stats.weeklyWins}
-                                            </Typography>
-                                            <Typography variant="body1">
-                                                Weekly Wins
-                                            </Typography>
-                                        </CardContent>
-                                    </Card>
-                                </motion.div>
-                            </Grid>
-                        </Grid>
+                            <motion.div whileHover={{ scale: 1.05 }}>
+                                <Card sx={{
+                                    background: '#00f2fe',
+                                    color: 'white',
+                                    height: '100%'
+                                }}>
+                                    <CardContent sx={{ textAlign: 'center', py: 3 }}>
+                                        <TrophyIcon sx={{ fontSize: 40, mb: 2 }} />
+                                        <Typography variant="h3" component="div" gutterBottom>
+                                            {stats.weeklyWins}
+                                        </Typography>
+                                        <Typography variant="body1">
+                                            Weekly Wins
+                                        </Typography>
+                                    </CardContent>
+                                </Card>
+                            </motion.div>
+                        </Box>
                     </Box>
 
                     {/* Quick Actions */}

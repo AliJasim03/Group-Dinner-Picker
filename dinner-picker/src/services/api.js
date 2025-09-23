@@ -13,7 +13,7 @@ const api = axios.create({
 export const groupAPI = {
     getAllGroups: () => api.get('/api/groups'),
     getGroup: (id) => api.get(`/api/groups/${id}`),
-    createGroup: (groupData) => api.post('/api/groups', groupData),
+    createGroup: (groupData) => api.post('/api/groups', groupData), // TODO : check implementation in spring
     getUserGroups: (userId) => api.get(`/api/groups/user/${userId}`),
 };
 
@@ -26,7 +26,7 @@ export const sessionAPI = {
 };
 
 // Options API
-// need implementation in spring
+// TODO : check implementation in spring
 export const optionAPI = {
     getSessionOptions: (sessionId) => api.get(`/api/sessions/${sessionId}/options`),
     addOption: (optionData) => api.post('/api/options', optionData),

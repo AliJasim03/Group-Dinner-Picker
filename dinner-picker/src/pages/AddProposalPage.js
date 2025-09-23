@@ -294,7 +294,7 @@ const AddProposalPage = () => {
                                             )}
                                         />
                                     </Grid>
-
+                                            {/** TODO : fix price range component its too small */}
                                     <Grid item xs={12} md={6}>
                                         <FormControl fullWidth>
                                             <InputLabel>Price Range</InputLabel>
