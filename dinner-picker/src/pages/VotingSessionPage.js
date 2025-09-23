@@ -48,11 +48,12 @@ const VotingSessionPage = () => {
             setLoading(true);
             const [sessionResponse, optionsResponse] = await Promise.all([
                 sessionAPI.getSession(sessionId),
-                optionAPI.getSessionOptions(sessionId)
+                //optionAPI.getSessionOptions(sessionId)
             ]);
 
             setSession(sessionResponse.data);
-            setOptions(optionsResponse.data);
+            setOptions(sessionResponse.data.options || []);
+            console.log(sessionResponse.data);
         } catch (error) {
             toast.error('Failed to load session data');
             navigate('/groups');

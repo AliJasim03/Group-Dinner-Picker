@@ -179,7 +179,7 @@ const GroupsPage = () => {
                                                 sx={{
                                                     cursor: 'pointer',
                                                     height: '100%',
-                                                    background: `linear-gradient(135deg, ${group.colorTheme || '#667eea'} 0%, ${group.colorTheme || '#764ba2'} 100%)`,
+                                                    background: `linear-gradient(135deg, ${group.colorTheme || '#f2ecd8'} 0%, ${group.colorTheme || '#f0e9f7'} 100%)`,
                                                     color: 'white',
                                                     position: 'relative',
                                                     overflow: 'hidden',

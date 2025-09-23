@@ -32,6 +32,18 @@ public class DinnerPickerController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
+    @GetMapping("/sessions/{sessionId}/options")
+    public ResponseEntity<List<Option>> getSessionOptions(@PathVariable Long sessionId) {
+        try {
+            List<Option> options = dinnerPickerService.getSessionOptions(sessionId);
+            return ResponseEntity.ok(options);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
 
     @PostMapping("/options")
     public ResponseEntity<Map<String, Object>> addOption(@Valid @RequestBody AddOptionRequest request) {
@@ -125,4 +137,24 @@ public class DinnerPickerController {
         response.put("totalOptions", dinnerPickerService.getAllOptions().size());
         return ResponseEntity.ok(response);
     }
+
+    @PostMapping("/options/{optionId}/vote")
+    public ResponseEntity<Map<String, Object>> voteOption(@PathVariable Long optionId,
+                                                          @Valid @RequestBody VoteRequest request) {
+        Map<String, Object> response = new HashMap<>();
+        try {
+            dinnerPickerService.vote(optionId, request.getDelta());
+            response.put("success", true);
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException e) {
+            response.put("success", false);
+            response.put("error", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+        } catch (Exception e) {
+            response.put("success", false);
+            response.put("error", "Internal server error");
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+        }
+    }
+
 }

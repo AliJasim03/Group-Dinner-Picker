@@ -23,6 +23,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
+import { theme } from '../theme/theme';
 
 const HomePage = () => {
     const [stats, setStats] = useState({
@@ -126,10 +127,10 @@ const HomePage = () => {
                 <Box sx={{ py: 6 }}>
                     {/* Hero Section */}
                     <Box sx={{ textAlign: 'center', mb: 6 }}>
-                        <Typography variant="h1" component="h1" gutterBottom>
+                        <Typography variant="h1" color={theme.palette.background.default} component="h1" gutterBottom>
                             Welcome back, Alex! 👋
                         </Typography>
-                        <Typography variant="h6" color="text.secondary" sx={{ mb: 4, maxWidth: 600, mx: 'auto' }}>
+                        <Typography variant="h6" color={theme.palette.background.paper} sx={{ mb: 4, maxWidth: 600, mx: 'auto' }}>
                             Ready to discover your next amazing dining experience? Let's see what your groups are up to!
                         </Typography>
 
@@ -138,7 +139,7 @@ const HomePage = () => {
                             <Grid item xs={12} md={4}>
                                 <motion.div whileHover={{ scale: 1.05 }}>
                                     <Card sx={{
-                                        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                                        background: theme.palette.primary.light,
                                         color: 'white',
                                         height: '100%'
                                     }}>
@@ -158,7 +159,7 @@ const HomePage = () => {
                             <Grid item xs={12} md={4}>
                                 <motion.div whileHover={{ scale: 1.05 }}>
                                     <Card sx={{
-                                        background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+                                        background: theme.palette.secondary.main,
                                         color: 'white',
                                         height: '100%'
                                     }}>
@@ -178,7 +179,7 @@ const HomePage = () => {
                             <Grid item xs={12} md={4}>
                                 <motion.div whileHover={{ scale: 1.05 }}>
                                     <Card sx={{
-                                        background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+                                        background: '#00f2fe',
                                         color: 'white',
                                         height: '100%'
                                     }}>
@@ -202,48 +203,59 @@ const HomePage = () => {
                         ⚡ Quick Actions
                     </Typography>
 
-                    <Grid container spacing={3} sx={{ mb: 6 }}>
+                    <Box sx={{ 
+                        display: 'flex', 
+                        justifyContent: 'space-between', 
+                        gap: 3, 
+                        mb: 6,
+                        flexWrap: 'wrap',
+                        '& > *': {
+                            flex: '1 1 300px',
+                            minWidth: '280px'
+                        }
+                    }}>
                         {quickActions.map((action, index) => (
-                            <Grid item xs={12} md={4} key={index}>
-                                <motion.div
-                                    initial={{ opacity: 0, y: 20 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    transition={{ duration: 0.6, delay: index * 0.1 }}
-                                    whileHover={{ scale: 1.02 }}
+                            <motion.div
+                                key={index}
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ duration: 0.6, delay: index * 0.1 }}
+                                whileHover={{ scale: 1.02 }}
+                                style={{ flex: '1 1 300px', minWidth: '280px' }}
+                            >
+                                <Card
+                                    sx={{
+                                        cursor: 'pointer',
+                                        background: 'rgba(255, 255, 255, 0.95)',
+                                        height: '100%',
+                                        '&:hover': {
+                                            boxShadow: `0 12px 48px ${action.color}40`,
+                                        }
+                                    }}
+                                    onClick={action.action}
                                 >
-                                    <Card
-                                        sx={{
-                                            cursor: 'pointer',
-                                            background: 'rgba(255, 255, 255, 0.95)',
-                                            '&:hover': {
-                                                boxShadow: `0 12px 48px ${action.color}40`,
-                                            }
-                                        }}
-                                        onClick={action.action}
-                                    >
-                                        <CardContent sx={{ textAlign: 'center', py: 4 }}>
-                                            <Avatar sx={{
-                                                bgcolor: action.color,
-                                                width: 60,
-                                                height: 60,
-                                                mx: 'auto',
-                                                mb: 2,
-                                                fontSize: 30
-                                            }}>
-                                                {action.icon}
-                                            </Avatar>
-                                            <Typography variant="h6" gutterBottom>
-                                                {action.title}
-                                            </Typography>
-                                            <Typography variant="body2" color="text.secondary">
-                                                {action.description}
-                                            </Typography>
-                                        </CardContent>
-                                    </Card>
-                                </motion.div>
-                            </Grid>
+                                    <CardContent sx={{ textAlign: 'center', py: 4 }}>
+                                        <Avatar sx={{
+                                            bgcolor: action.color,
+                                            width: 60,
+                                            height: 60,
+                                            mx: 'auto',
+                                            mb: 2,
+                                            fontSize: 30
+                                        }}>
+                                            {action.icon}
+                                        </Avatar>
+                                        <Typography variant="h6" gutterBottom>
+                                            {action.title}
+                                        </Typography>
+                                        <Typography variant="body2" color="text.secondary">
+                                            {action.description}
+                                        </Typography>
+                                    </CardContent>
+                                </Card>
+                            </motion.div>
                         ))}
-                    </Grid>
+                    </Box>
 
                     {/* Recent Activity */}
                     <Card sx={{ background: 'rgba(255, 255, 255, 0.95)' }}>
