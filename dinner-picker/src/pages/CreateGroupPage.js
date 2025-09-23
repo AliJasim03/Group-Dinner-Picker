@@ -211,29 +211,77 @@ const CreateGroupPage = () => {
 
                             <Box component="form" onSubmit={handleSubmit} noValidate>
                                 <Grid container spacing={3}>
-                                    <Grid item xs={12}>
-                                        <TextField
-                                            fullWidth
-                                            label="Group Name"
-                                            placeholder="e.g., Friday Lunch Squad"
-                                            value={formData.name}
-                                            onChange={(e) => handleInputChange('name', e.target.value)}
-                                            error={!!errors.name}
-                                            helperText={errors.name}
-                                            required
-                                            disabled={loading}
-                                            InputProps={{
-                                                endAdornment: formData.name.trim() && !errors.name && (
-                                                    <InputAdornment position="end">
-                                                        <CheckIcon color="success" />
-                                                    </InputAdornment>
-                                                )
-                                            }}
-                                            sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
-                                        />
+                                    {/* Group Name and Icon Selection - Same Row */}
+                                    <Grid item size={12}>
+                                        <Grid container spacing={2}>
+                                            <Grid item size={6} sm={8}>
+                                                <TextField
+                                                    fullWidth
+                                                    label="Group Name"
+                                                    placeholder="e.g., Friday Lunch Squad"
+                                                    value={formData.name}
+                                                    onChange={(e) => handleInputChange('name', e.target.value)}
+                                                    error={!!errors.name}
+                                                    helperText={errors.name}
+                                                    required
+                                                    disabled={loading}
+                                                    InputProps={{
+                                                        endAdornment: formData.name.trim() && !errors.name && (
+                                                            <InputAdornment position="end">
+                                                                <CheckIcon color="success" />
+                                                            </InputAdornment>
+                                                        )
+                                                    }}
+                                                    sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+                                                />
+                                            </Grid>
+
+                                            <Grid item xs={12} sm={4}>
+                                                <Box sx={{ position: 'relative' }}>
+                                                    <Button
+                                                        variant="outlined"
+                                                        startIcon={<EmojiIcon />}
+                                                        onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                                                        disabled={loading}
+                                                        fullWidth
+                                                        sx={{
+                                                            borderRadius: 2,
+                                                            textTransform: 'none',
+                                                            minHeight: 56,
+                                                            justifyContent: 'flex-start'
+                                                        }}
+                                                    >
+                                                        <Avatar sx={{ mx: 1, bgcolor: 'transparent', width: 32, height: 32 }}>
+                                                            {formData.emojiIcon}
+                                                        </Avatar>
+                                                        Select Icon
+                                                    </Button>
+
+                                                    <AnimatePresence>
+                                                        {showEmojiPicker && (
+                                                            <motion.div
+                                                                initial={{ opacity: 0, scale: 0.8 }}
+                                                                animate={{ opacity: 1, scale: 1 }}
+                                                                exit={{ opacity: 0, scale: 0.8 }}
+                                                                style={{
+                                                                    position: 'absolute',
+                                                                    top: '100%',
+                                                                    right: 0,
+                                                                    zIndex: 1000,
+                                                                    marginTop: 8
+                                                                }}
+                                                            >
+                                                                <EmojiPicker onEmojiClick={handleEmojiClick} />
+                                                            </motion.div>
+                                                        )}
+                                                    </AnimatePresence>
+                                                </Box>
+                                            </Grid>
+                                        </Grid>
                                     </Grid>
 
-                                    <Grid item xs={12}>
+                                    {/* Description - Separate Row */}
+                                    <Grid item size={12}>
                                         <TextField
                                             fullWidth
                                             label="Description (Optional)"
@@ -249,52 +297,8 @@ const CreateGroupPage = () => {
                                         />
                                     </Grid>
 
-                                    {/* Emoji Selection */}
-                                    <Grid item xs={12}>
-                                        <Typography variant="h6" gutterBottom>
-                                            Choose an Icon
-                                        </Typography>
-                                        <Box sx={{ position: 'relative' }}>
-                                            <Button
-                                                variant="outlined"
-                                                startIcon={<EmojiIcon />}
-                                                onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                                                disabled={loading}
-                                                sx={{
-                                                    borderRadius: 2,
-                                                    textTransform: 'none',
-                                                    minHeight: 56
-                                                }}
-                                            >
-                                                <Avatar sx={{ mx: 1, bgcolor: 'transparent' }}>
-                                                    {formData.emojiIcon}
-                                                </Avatar>
-                                                Select Icon
-                                            </Button>
-
-                                            <AnimatePresence>
-                                                {showEmojiPicker && (
-                                                    <motion.div
-                                                        initial={{ opacity: 0, scale: 0.8 }}
-                                                        animate={{ opacity: 1, scale: 1 }}
-                                                        exit={{ opacity: 0, scale: 0.8 }}
-                                                        style={{
-                                                            position: 'absolute',
-                                                            top: '100%',
-                                                            left: 0,
-                                                            zIndex: 1000,
-                                                            marginTop: 8
-                                                        }}
-                                                    >
-                                                        <EmojiPicker onEmojiClick={handleEmojiClick} />
-                                                    </motion.div>
-                                                )}
-                                            </AnimatePresence>
-                                        </Box>
-                                    </Grid>
-
                                     {/* Color Theme Selection */}
-                                    <Grid item xs={12}>
+                                    <Grid item size={12}>
                                         <Typography variant="h6" gutterBottom>
                                             Choose a Theme
                                         </Typography>

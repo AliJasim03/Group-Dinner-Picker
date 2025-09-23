@@ -11,10 +11,6 @@ import {
     Fab,
     LinearProgress,
     Alert,
-    Dialog,
-    DialogTitle,
-    DialogContent,
-    DialogActions,
     Snackbar
 } from '@mui/material';
 import {
@@ -34,6 +30,7 @@ import toast from 'react-hot-toast';
 import Confetti from 'react-confetti';
 import ModernProposalCard from '../components/ModernProposalCard';
 import { sessionAPI, optionAPI } from '../services/api';
+import LockSessionDialog from '../dialogs/LockSessionDialog';
 
 const VotingSessionPage = () => {
     const { sessionId } = useParams();
@@ -474,37 +471,12 @@ const VotingSessionPage = () => {
                 </Fab>
             )}
 
-            {/* Lock Confirmation Dialog */}
-            <Dialog
+            <LockSessionDialog
                 open={lockDialogOpen}
                 onClose={() => setLockDialogOpen(false)}
-                maxWidth="sm"
-                fullWidth
-            >
-                <DialogTitle>
-                    {session.locked ? '🔓 Unlock Session?' : '🔒 Lock Session?'}
-                </DialogTitle>
-                <DialogContent>
-                    <Typography>
-                        {session.locked
-                            ? 'Unlocking will allow members to add new restaurants and continue voting.'
-                            : 'Locking will stop all voting and finalize the results. This action can be undone later.'
-                        }
-                    </Typography>
-                </DialogContent>
-                <DialogActions>
-                    <Button onClick={() => setLockDialogOpen(false)}>
-                        Cancel
-                    </Button>
-                    <Button
-                        onClick={handleLockToggle}
-                        variant="contained"
-                        color={session.locked ? "success" : "warning"}
-                    >
-                        {session.locked ? 'Unlock' : 'Lock'} Session
-                    </Button>
-                </DialogActions>
-            </Dialog>
+                session={session}
+                onConfirm={handleLockToggle}
+            />
         </Container>
     );
 };

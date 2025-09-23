@@ -1,28 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import {
-    Container,
-    Typography,
-    Box,
-    Card,
-    CardContent,
-    TextField,
-    Button,
-    Grid,
-    FormControl,
-    InputLabel,
-    Select,
-    MenuItem,
-    Chip,
-    Avatar,
-    Paper,
-    InputAdornment,
-    Autocomplete,
-    Alert,
-    CircularProgress,
-    Stepper,
-    Step,
-    StepLabel
-} from '@mui/material';
+import {Container,Typography, Box, Card, CardContent, TextField, Button, Grid, FormControl, InputLabel, Select,  MenuItem, Chip, Avatar, Paper, InputAdornment, Autocomplete, Alert, CircularProgress, Stepper, Step, StepLabel}
+ from '@mui/material';
 import {
     ArrowBack as ArrowBackIcon,
     Restaurant as RestaurantIcon,
@@ -40,6 +18,7 @@ import { sessionAPI, optionAPI } from '../services/api';
 const AddProposalPage = () => {
     const { sessionId } = useParams();
     const [session, setSession] = useState(null);
+    const [popularRestaurants, setPopularRestaurants] = useState([]);
     const [formData, setFormData] = useState({
         name: '',
         link: '',
@@ -66,27 +45,56 @@ const AddProposalPage = () => {
         { value: '$$$', label: '$$$ - Upscale', description: '$30+ per person' }
     ];
 
-    const popularRestaurants = [
-        { name: 'Pizza Palace', link: 'https://pizzapalace.com', cuisine: 'Italian', price: '$$' },
-        { name: 'Burger Barn', link: 'https://burgerbarn.com', cuisine: 'American', price: '$' },
-        { name: 'Sushi Supreme', link: 'https://sushisupreme.com', cuisine: 'Japanese', price: '$$$' },
-        { name: 'Taco Fiesta', link: 'https://tacofiesta.com', cuisine: 'Mexican', price: '$' },
-        { name: 'Pasta Paradise', link: 'https://pastaparadise.com', cuisine: 'Italian', price: '$$' }
-    ];
-
     const steps = ['Basic Info', 'Details', 'Review'];
 
+    const fetchPopularRestaurants = async () => {
+        try {
+            console.log('Fetching popular restaurants from database...');
+            const response = await optionAPI.getAllOptions();
+            console.log('Popular restaurants response:', response.data);
+
+            // Handle both old format (direct array) and new format (with success flag)
+            const restaurantsData = response.data.success ? response.data.data : response.data;
+            
+            // Get unique restaurants (avoid duplicates) and limit to top 6 by votes
+            const uniqueRestaurants = Array.isArray(restaurantsData) ? restaurantsData
+                .filter((option, index, self) => 
+                    index === self.findIndex(o => o.name.toLowerCase() === option.name.toLowerCase())
+                )
+                .sort((a, b) => (b.votes || 0) - (a.votes || 0))
+                .slice(0, 6)
+                .map(option => ({
+                    name: option.name,
+                    link: option.link,
+                    cuisine: option.cuisine,
+                    price: option.priceRange,
+                    votes: option.votes || 0
+                })) : [];
+
+            setPopularRestaurants(uniqueRestaurants);
+        } catch (error) {
+            console.error('Error fetching popular restaurants:', error);
+            // Set empty array on error, but don't show error toast as this is optional
+            setPopularRestaurants([]);
+        }
+    };
+
     useEffect(() => {
-        const fetchSession = async () => {
+        const fetchSessionAndRestaurants = async () => {
             try {
                 setPageLoading(true);
                 console.log('Fetching session with ID:', sessionId);
 
-                const response = await sessionAPI.getSession(sessionId);
-                console.log('Session response:', response.data);
+                // Fetch both session data and popular restaurants in parallel
+                const [sessionResponse] = await Promise.all([
+                    sessionAPI.getSession(sessionId),
+                    fetchPopularRestaurants()
+                ]);
+
+                console.log('Session response:', sessionResponse.data);
 
                 // Handle both old format (direct data) and new format (with success flag)
-                const sessionData = response.data.success ? response.data.data : response.data;
+                const sessionData = sessionResponse.data.success ? sessionResponse.data.data : sessionResponse.data;
                 setSession(sessionData);
 
                 // Check if session is locked
@@ -105,7 +113,7 @@ const AddProposalPage = () => {
         };
 
         if (sessionId) {
-            fetchSession();
+            fetchSessionAndRestaurants();
         }
     }, [sessionId, navigate]);
 
@@ -171,6 +179,20 @@ const AddProposalPage = () => {
         try {
             setLoading(true);
 
+            // Check if restaurant already exists in the current session
+            const existingOptions = await optionAPI.getSessionOptions(sessionId);
+            const existingOptionsData = existingOptions.data.success ? existingOptions.data.data : existingOptions.data;
+            
+            const isDuplicate = Array.isArray(existingOptionsData) && 
+                existingOptionsData.some(option => 
+                    option.name.toLowerCase().trim() === formData.name.toLowerCase().trim()
+                );
+
+            if (isDuplicate) {
+                toast.error('This restaurant is already added to the voting session!');
+                return;
+            }
+
             const proposalData = {
                 name: formData.name.trim(),
                 link: formData.link.trim(),
@@ -185,7 +207,10 @@ const AddProposalPage = () => {
             const response = await optionAPI.addOption(proposalData);
             console.log('Add option response:', response.data);
 
-            if (response.data.success) {
+            // Handle both old and new response formats
+            const isSuccess = response.data.success !== undefined ? response.data.success : response.status === 200 || response.status === 201;
+
+            if (isSuccess) {
                 toast.success('🎉 Restaurant added successfully!');
                 navigate(`/sessions/${sessionId}`);
             } else {
@@ -208,6 +233,8 @@ const AddProposalPage = () => {
                     errorMessage = 'Please fix the validation errors';
                 } else if (error.response.status === 400) {
                     errorMessage = 'Invalid restaurant data. Please check your input.';
+                } else if (error.response.status === 409) {
+                    errorMessage = 'This restaurant already exists in the voting session.';
                 } else if (error.response.status === 500) {
                     errorMessage = 'Server error. Please try again later.';
                 }
@@ -236,10 +263,11 @@ const AddProposalPage = () => {
             ...prev,
             name: restaurant.name,
             link: restaurant.link,
-            cuisine: restaurant.cuisine,
-            priceRange: restaurant.price
+            cuisine: restaurant.cuisine || '',
+            priceRange: restaurant.price || ''
         }));
         setActiveStep(2); // Jump to review step
+        toast.success(`Quick-filled with ${restaurant.name}!`);
     };
 
     if (pageLoading) {
@@ -316,29 +344,56 @@ const AddProposalPage = () => {
                                     animate={{ opacity: 1, y: 0 }}
                                 >
                                     <Typography variant="h6" gutterBottom sx={{ mb: 2 }}>
-                                        Quick Fill Options
+                                        Popular Restaurants {popularRestaurants.length > 0 && `(${popularRestaurants.length} available)`}
                                     </Typography>
-                                    <Grid container spacing={2} sx={{ mb: 3 }}>
-                                        {popularRestaurants.map((restaurant, index) => (
-                                            <Grid item xs={12} sm={6} key={index}>
-                                                <Paper
-                                                    sx={{
-                                                        p: 2,
-                                                        cursor: 'pointer',
-                                                        '&:hover': { bgcolor: 'action.hover' }
-                                                    }}
-                                                    onClick={() => handleQuickFill(restaurant)}
-                                                >
-                                                    <Typography variant="body1" fontWeight="bold">
-                                                        {restaurant.name}
-                                                    </Typography>
-                                                    <Typography variant="body2" color="text.secondary">
-                                                        {restaurant.cuisine} • {restaurant.price}
-                                                    </Typography>
-                                                </Paper>
-                                            </Grid>
-                                        ))}
-                                    </Grid>
+                                    
+                                    {popularRestaurants.length > 0 ? (
+                                        <Grid container spacing={2} sx={{ mb: 3 }}>
+                                            {popularRestaurants.map((restaurant, index) => (
+                                                <Grid item xs={12} sm={6} key={`${restaurant.name}-${index}`}>
+                                                    <Paper
+                                                        sx={{
+                                                            p: 2,
+                                                            cursor: 'pointer',
+                                                            transition: 'all 0.2s ease-in-out',
+                                                            '&:hover': { 
+                                                                bgcolor: 'action.hover',
+                                                                transform: 'translateY(-2px)',
+                                                                boxShadow: 2
+                                                            }
+                                                        }}
+                                                        onClick={() => handleQuickFill(restaurant)}
+                                                    >
+                                                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                                            <Box sx={{ flex: 1 }}>
+                                                                <Typography variant="body1" fontWeight="bold">
+                                                                    {restaurant.name}
+                                                                </Typography>
+                                                                <Typography variant="body2" color="text.secondary">
+                                                                    {restaurant.cuisine && restaurant.price 
+                                                                        ? `${restaurant.cuisine} • ${restaurant.price}`
+                                                                        : restaurant.cuisine || restaurant.price || 'Restaurant'
+                                                                    }
+                                                                </Typography>
+                                                            </Box>
+                                                            {restaurant.votes > 0 && (
+                                                                <Chip 
+                                                                    label={`${restaurant.votes} votes`} 
+                                                                    size="small" 
+                                                                    color="primary"
+                                                                    sx={{ ml: 1 }}
+                                                                />
+                                                            )}
+                                                        </Box>
+                                                    </Paper>
+                                                </Grid>
+                                            ))}
+                                        </Grid>
+                                    ) : (
+                                        <Alert severity="info" sx={{ mb: 3 }}>
+                                            No popular restaurants found. Be the first to add some options!
+                                        </Alert>
+                                    )}
                                 </motion.div>
                             )}
 

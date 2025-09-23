@@ -233,6 +233,15 @@ export const sessionAPI = {
 
 // Options API
 export const optionAPI = {
+    getAllOptions: async () => {
+        try {
+            const response = await api.get('/api/options');
+            return normalizeResponse(response);
+        } catch (error) {
+            throw error;
+        }
+    },
+
     getSessionOptions: async (sessionId) => {
         if (!sessionId) throw new Error('Session ID is required');
 

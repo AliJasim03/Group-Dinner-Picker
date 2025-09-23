@@ -1,29 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import {
-    Container,
-    Typography,
-    Box,
-    Grid,
-    Card,
-    CardContent,
-    Button,
-    Avatar,
-    Chip,
-    IconButton,
-    Skeleton
-} from '@mui/material';
-import {
-    Add as AddIcon,
-    Group as GroupIcon,
-    Poll as PollIcon,
-    TrendingUp as TrendingIcon,
-    Schedule as ScheduleIcon,
-    EmojiEvents as TrophyIcon
-} from '@mui/icons-material';
+import { Container, Box } from '@mui/material';
+import { Group as GroupIcon, Poll as PollIcon, EmojiEvents as TrophyIcon } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
-import { theme } from '../theme/theme';
+
+// Import modular components
+import WelcomeHero from '../components/WelcomeHero';
+import StatsCards from '../components/StatsCards';
+import QuickActions from '../components/QuickActions';
+import RecentActivity from '../components/RecentActivity';
+import HomePageSkeleton from '../components/HomePageSkeleton';
+
+// Import API services
+import { groupAPI, sessionAPI } from '../services/api';
 
 const HomePage = () => {
     const [stats, setStats] = useState({
@@ -33,46 +23,145 @@ const HomePage = () => {
     });
     const [recentActivity, setRecentActivity] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
     const navigate = useNavigate();
-    // TODO : fetch real data from backend
-    useEffect(() => {
-        // Simulate loading recent activity
-        setTimeout(() => {
+    
+    // Function to calculate weekly wins (sessions completed in the last 7 days)
+    const calculateWeeklyWins = (sessions) => {
+        const oneWeekAgo = new Date();
+        oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+        
+        return sessions.filter(session => {
+            // Check if session is locked (completed) and was created in the last week
+            if (!session.locked || !session.createdAt) return false;
+            
+            const sessionDate = new Date(session.createdAt);
+            return sessionDate >= oneWeekAgo;
+        }).length;
+    };
+
+    // Fetch real data from backend
+    const fetchDashboardData = async () => {
+        try {
+            setLoading(true);
+            setError(null);
+
+            // Assuming single user application with userId = 1
+            const userId = 1;
+            
+            // Fetch user's groups
+            const groupsResponse = await groupAPI.getUserGroups(userId);
+            const userGroups = groupsResponse.data || [];
+            
+            // Fetch all sessions for user's groups
+            let allSessions = [];
+            let activeSessions = [];
+            
+            for (const group of userGroups) {
+                try {
+                    const sessionsResponse = await sessionAPI.getGroupSessions(group.id);
+                    // Handle different response formats - sessions endpoint returns direct array
+                    const groupSessions = Array.isArray(sessionsResponse.data) 
+                        ? sessionsResponse.data 
+                        : (sessionsResponse.data?.data || []);
+                    
+                    // Add group information to each session since it's not included in the API response
+                    const sessionsWithGroup = groupSessions.map(session => ({
+                        ...session,
+                        groupInfo: group // Add the full group object
+                    }));
+                    
+                    allSessions = [...allSessions, ...sessionsWithGroup];
+                    
+                    // Filter for active (unlocked) sessions
+                    const activeGroupSessions = sessionsWithGroup.filter(session => !session.locked);
+                    activeSessions = [...activeSessions, ...activeGroupSessions];
+                } catch (sessionError) {
+                    console.warn(`Failed to fetch sessions for group ${group.id}:`, sessionError);
+                    // Continue with other groups even if one fails
+                }
+            }
+
+            // Calculate stats
+            const weeklyWins = calculateWeeklyWins(allSessions);
+
             setStats({
-                activeVotes: 3,
-                totalGroups: 4,
-                weeklyWins: 2
+                activeVotes: activeSessions.length,
+                totalGroups: userGroups.length,
+                weeklyWins: weeklyWins
             });
 
-            setRecentActivity([
-                {
-                    id: 1,
-                    type: 'vote',
-                    title: 'Friday Team Lunch',
-                    group: 'Work Team 💼',
-                    time: '5 min ago',
-                    status: 'active'
-                },
-                {
-                    id: 2,
-                    type: 'result',
-                    title: 'Saturday Night Dinner',
-                    group: 'Weekend Squad 🎉',
-                    winner: 'Sushi Zen',
-                    time: '1 hour ago',
-                    status: 'completed'
-                },
-                {
-                    id: 3,
-                    type: 'new_session',
-                    title: 'Sunday Family Meal',
-                    group: 'Family Dinners 👨‍👩‍👧‍👦',
-                    time: '3 hours ago',
-                    status: 'pending'
-                }
-            ]);
+            // Generate recent activity from recent sessions
+            const recentSessions = allSessions
+                .filter(session => session.createdAt) // Only sessions with valid creation date
+                .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+                .slice(0, 3)
+                .map(session => {
+                    const group = session.groupInfo; // Use the group info we added
+                    const createdAt = new Date(session.createdAt);
+                    const timeAgo = getTimeAgo(createdAt);
+                    
+                    return {
+                        id: session.id,
+                        type: session.locked ? 'result' : 'vote',
+                        title: session.title || 'Untitled Session',
+                        group: group ? `${group.name} ${group.emojiIcon || '🍽️'}` : 'Unknown Group',
+                        time: timeAgo,
+                        status: session.locked ? 'completed' : 'active'
+                    };
+                });
+
+            setRecentActivity(recentSessions);
+
+            // If no recent activity, show a placeholder
+            if (recentSessions.length === 0) {
+                setRecentActivity([
+                    {
+                        id: 'placeholder',
+                        type: 'placeholder',
+                        title: 'No recent activity',
+                        group: 'Get started by creating a group!',
+                        time: '',
+                        status: 'pending'
+                    }
+                ]);
+            }
+
+        } catch (error) {
+            console.error('Failed to fetch dashboard data:', error);
+            setError(error.message || 'Failed to load dashboard data');
+            toast.error('Failed to load dashboard data');
+            
+            // Fallback to default data in case of error
+            setStats({
+                activeVotes: 0,
+                totalGroups: 0,
+                weeklyWins: 0
+            });
+            setRecentActivity([]);
+            
+        } finally {
             setLoading(false);
-        }, 1000);
+        }
+    };
+
+    // Helper function to calculate time ago
+    const getTimeAgo = (date) => {
+        const now = new Date();
+        const diffInMinutes = Math.floor((now - date) / (1000 * 60));
+        
+        if (diffInMinutes < 1) return 'Just now';
+        if (diffInMinutes < 60) return `${diffInMinutes} min ago`;
+        
+        const diffInHours = Math.floor(diffInMinutes / 60);
+        if (diffInHours < 24) return `${diffInHours} hour${diffInHours > 1 ? 's' : ''} ago`;
+        
+        const diffInDays = Math.floor(diffInHours / 24);
+        return `${diffInDays} day${diffInDays > 1 ? 's' : ''} ago`;
+    };
+
+    useEffect(() => {
+        fetchDashboardData();
     }, []);
 
     const quickActions = [
@@ -100,21 +189,7 @@ const HomePage = () => {
     ];
 
     if (loading) {
-        return (
-            <Container maxWidth="lg">
-                <Box sx={{ py: 4 }}>
-                    <Skeleton variant="text" width="60%" height={60} />
-                    <Skeleton variant="text" width="40%" height={30} sx={{ mt: 2 }} />
-                    <Grid container spacing={3} sx={{ mt: 4 }}>
-                        {[1, 2, 3].map((item) => (
-                            <Grid item xs={12} md={4} key={item}>
-                                <Skeleton variant="rectangular" height={120} sx={{ borderRadius: 4 }} />
-                            </Grid>
-                        ))}
-                    </Grid>
-                </Box>
-            </Container>
-        );
+        return <HomePageSkeleton />;
     }
 
     return (
@@ -125,213 +200,13 @@ const HomePage = () => {
                 transition={{ duration: 0.6 }}
             >
                 <Box sx={{ py: 6 }}>
-                    {/* Hero Section */}
-                    <Box sx={{ textAlign: 'center', mb: 6 }}>
-                        <Typography variant="h1" color={theme.palette.background.default} component="h1" gutterBottom>
-                            Welcome back, Alex! 👋
-                        </Typography>
-                        <Typography variant="h6" color={theme.palette.background.paper} sx={{ mb: 4, maxWidth: 600, mx: 'auto' }}>
-                            Ready to discover your next amazing dining experience? Let's see what your groups are up to!
-                        </Typography>
-
-                        {/* Stats Cards */}
-                        <Box sx={{ 
-                            display: 'flex', 
-                            justifyContent: 'center',
-                            gap: 3, 
-                            mb: 6,
-                            flexWrap: 'wrap',
-                            '& > *': {
-                                flex: '0 1 280px',
-                                maxWidth: '320px'
-                            }
-                        }}>
-                            <motion.div whileHover={{ scale: 1.05 }}>
-                                <Card sx={{
-                                    background: theme.palette.primary.light,
-                                    color: 'white',
-                                    height: '100%'
-                                }}>
-                                    <CardContent sx={{ textAlign: 'center', py: 3 }}>
-                                        <PollIcon sx={{ fontSize: 40, mb: 2 }} />
-                                        <Typography variant="h3" component="div" gutterBottom>
-                                            {stats.activeVotes}
-                                        </Typography>
-                                        <Typography variant="body1">
-                                            Active Votes
-                                        </Typography>
-                                    </CardContent>
-                                </Card>
-                            </motion.div>
-
-                            <motion.div whileHover={{ scale: 1.05 }}>
-                                <Card sx={{
-                                    background: theme.palette.secondary.main,
-                                    color: 'white',
-                                    height: '100%'
-                                }}>
-                                    <CardContent sx={{ textAlign: 'center', py: 3 }}>
-                                        <GroupIcon sx={{ fontSize: 40, mb: 2 }} />
-                                        <Typography variant="h3" component="div" gutterBottom>
-                                            {stats.totalGroups}
-                                        </Typography>
-                                        <Typography variant="body1">
-                                            Your Groups
-                                        </Typography>
-                                    </CardContent>
-                                </Card>
-                            </motion.div>
-
-                            <motion.div whileHover={{ scale: 1.05 }}>
-                                <Card sx={{
-                                    background: '#00f2fe',
-                                    color: 'white',
-                                    height: '100%'
-                                }}>
-                                    <CardContent sx={{ textAlign: 'center', py: 3 }}>
-                                        <TrophyIcon sx={{ fontSize: 40, mb: 2 }} />
-                                        <Typography variant="h3" component="div" gutterBottom>
-                                            {stats.weeklyWins}
-                                        </Typography>
-                                        <Typography variant="body1">
-                                            Weekly Wins
-                                        </Typography>
-                                    </CardContent>
-                                </Card>
-                            </motion.div>
-                        </Box>
-                    </Box>
-
-                    {/* Quick Actions */}
-                    <Typography variant="h4" gutterBottom sx={{ mb: 3, color: 'white', textAlign: 'center' }}>
-                        ⚡ Quick Actions
-                    </Typography>
-
-                    <Box sx={{ 
-                        display: 'flex', 
-                        justifyContent: 'space-between', 
-                        gap: 3, 
-                        mb: 6,
-                        flexWrap: 'wrap',
-                        '& > *': {
-                            flex: '1 1 300px',
-                            minWidth: '280px'
-                        }
-                    }}>
-                        {quickActions.map((action, index) => (
-                            <motion.div
-                                key={index}
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ duration: 0.6, delay: index * 0.1 }}
-                                whileHover={{ scale: 1.02 }}
-                                style={{ flex: '1 1 300px', minWidth: '280px' }}
-                            >
-                                <Card
-                                    sx={{
-                                        cursor: 'pointer',
-                                        background: 'rgba(255, 255, 255, 0.95)',
-                                        height: '100%',
-                                        '&:hover': {
-                                            boxShadow: `0 12px 48px ${action.color}40`,
-                                        }
-                                    }}
-                                    onClick={action.action}
-                                >
-                                    <CardContent sx={{ textAlign: 'center', py: 4 }}>
-                                        <Avatar sx={{
-                                            bgcolor: action.color,
-                                            width: 60,
-                                            height: 60,
-                                            mx: 'auto',
-                                            mb: 2,
-                                            fontSize: 30
-                                        }}>
-                                            {action.icon}
-                                        </Avatar>
-                                        <Typography variant="h6" gutterBottom>
-                                            {action.title}
-                                        </Typography>
-                                        <Typography variant="body2" color="text.secondary">
-                                            {action.description}
-                                        </Typography>
-                                    </CardContent>
-                                </Card>
-                            </motion.div>
-                        ))}
-                    </Box>
-
-                    {/* Recent Activity */}
-                    <Card sx={{ background: 'rgba(255, 255, 255, 0.95)' }}>
-                        <CardContent>
-                            <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-                                <TrendingIcon sx={{ mr: 2, color: 'primary.main' }} />
-                                <Typography variant="h5">
-                                    🔥 Recent Activity
-                                </Typography>
-                            </Box>
-
-                            {recentActivity.map((activity, index) => (
-                                <motion.div
-                                    key={activity.id}
-                                    initial={{ opacity: 0, x: -20 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    transition={{ duration: 0.5, delay: index * 0.1 }}
-                                >
-                                    <Box sx={{
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        py: 2,
-                                        borderBottom: index < recentActivity.length - 1 ? '1px solid #f0f0f0' : 'none'
-                                    }}>
-                                        <Avatar sx={{
-                                            bgcolor: activity.status === 'active' ? '#00d4aa' :
-                                                activity.status === 'completed' ? '#ffa726' : '#667eea',
-                                            mr: 3
-                                        }}>
-                                            {activity.type === 'vote' ? '🗳️' :
-                                                activity.type === 'result' ? '🏆' : '✨'}
-                                        </Avatar>
-
-                                        <Box sx={{ flex: 1 }}>
-                                            <Typography variant="subtitle1" fontWeight={600}>
-                                                {activity.title}
-                                            </Typography>
-                                            <Typography variant="body2" color="text.secondary">
-                                                {activity.group} • {activity.time}
-                                            </Typography>
-                                            {activity.winner && (
-                                                <Chip
-                                                    label={`Winner: ${activity.winner}`}
-                                                    size="small"
-                                                    sx={{ mt: 1, bgcolor: '#ffd700', color: '#000' }}
-                                                />
-                                            )}
-                                        </Box>
-
-                                        <Chip
-                                            label={activity.status}
-                                            size="small"
-                                            color={
-                                                activity.status === 'active' ? 'success' :
-                                                    activity.status === 'completed' ? 'warning' : 'primary'
-                                            }
-                                        />
-                                    </Box>
-                                </motion.div>
-                            ))}
-
-                            <Box sx={{ textAlign: 'center', mt: 3 }}>
-                                <Button
-                                    variant="outlined"
-                                    onClick={() => navigate('/groups')}
-                                    sx={{ borderRadius: '20px' }}
-                                >
-                                    View All Groups
-                                </Button>
-                            </Box>
-                        </CardContent>
-                    </Card>
+                    <WelcomeHero userName="Alex" />
+                    <StatsCards stats={stats} />
+                    <QuickActions quickActions={quickActions} />
+                    <RecentActivity 
+                        recentActivity={recentActivity} 
+                        onViewAllGroups={() => navigate('/groups')}
+                    />
                 </Box>
             </motion.div>
         </Container>
