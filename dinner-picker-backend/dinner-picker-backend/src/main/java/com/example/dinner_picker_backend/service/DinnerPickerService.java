@@ -30,6 +30,11 @@ public class DinnerPickerService {
     @Autowired
     private VotingSessionRepository votingSessionRepository;
 
+    public DinnerPickerService(OptionRepository optionRepository, VotingSessionRepository votingSessionRepository, VotingConfigRepository votingConfigRepository) {
+        this.optionRepository = optionRepository;
+        this.votingSessionRepository = votingSessionRepository;
+        this.votingConfigRepository = votingConfigRepository;
+    }
     // For backward compatibility - get all options
     public List<Option> getAllOptions() {
         try {
