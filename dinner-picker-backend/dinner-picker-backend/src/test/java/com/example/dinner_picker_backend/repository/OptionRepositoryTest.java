@@ -12,15 +12,24 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.*;
 
+import static org.junit.jupiter.api.Assertions.*;
+
 @SpringBootTest
 @Transactional
 public class OptionRepositoryTest {
     @Autowired
     private OptionRepository optionRepository;
+    @Autowired
+    private GroupRepository groupRepository;
+    @Autowired
+    private VotingSessionRepository votingSessionRepository;
 
     @Test
     @DisplayName("Test findAllOrderByVotesDesc")
     public void testFindAllOrderByVotesDesc() {
+        //clear db
+        optionRepository.deleteAll();
+        optionRepository.flush();
         // Given
         Option option1 = new Option();
         option1.setName("Option 1");
@@ -40,14 +49,15 @@ public class OptionRepositoryTest {
         option3.setLink("https://option3.com");
         optionRepository.save(option3);
 
+        optionRepository.flush();
+
         // When
         List<Option> options = optionRepository.findAllOrderByVotesDesc();
 
-        // Then
-        assert options.size() == 3;
-        assert options.get(0).getVotes() == 10;
-        assert options.get(1).getVotes() == 5;
-        assert options.get(2).getVotes() == 3;
+        assertEquals(3, options.size());
+        assertEquals(10, options.get(0).getVotes());
+        assertEquals(5, options.get(1).getVotes());
+        assertEquals(3, options.get(2).getVotes());
     }
 
     @Test
@@ -57,11 +67,13 @@ public class OptionRepositoryTest {
         Group group = new Group();
         group.setName("Test Group");
         group.setCreatedAt(LocalDateTime.now());
+        groupRepository.save(group);
+
         VotingSession session = new VotingSession();
         session.setTitle("Test Session");
         session.setGroup(group);
         session.setLocked(false);
-
+        votingSessionRepository.save(session);
 
         Option option1 = new Option();
         option1.setName("Option 1");
@@ -88,10 +100,10 @@ public class OptionRepositoryTest {
         List<Option> options = optionRepository.findByVotingSessionIdOrderByVotesDesc(session.getId());
 
         // Then
-        assert options.size() == 3;
-        assert options.get(0).getVotes() == 10;
-        assert options.get(1).getVotes() == 5;
-        assert options.get(2).getVotes() == 3;
+        assertEquals(3, options.size());
+        assertEquals(10, options.get(0).getVotes());
+        assertEquals(5, options.get(1).getVotes());
+        assertEquals(3, options.get(2).getVotes());
     }
 
     @Test
@@ -101,10 +113,12 @@ public class OptionRepositoryTest {
         Group group = new Group();
         group.setName("Test Group");
         group.setCreatedAt(LocalDateTime.now());
+        groupRepository.save(group);
         VotingSession session = new VotingSession();
         session.setTitle("Test Session");
         session.setGroup(group);
         session.setLocked(false);
+        votingSessionRepository.save(session);
 
         Option option1 = new Option();
         option1.setName("Option 1");
@@ -119,9 +133,12 @@ public class OptionRepositoryTest {
         option2.setVotes(0);
         option2.setVotingSession(session);
         optionRepository.save(option2);
+        optionRepository.flush();
         
         List<Option> options = optionRepository.findWinnersBySessionId(session.getId());
-        assert options.size() == 1;
-        assert options.get(0).getVotes() == 5;  
+
+        assertEquals(1, options.size());
+        assertEquals(5, options.get(0).getVotes());
+
     }
 }
