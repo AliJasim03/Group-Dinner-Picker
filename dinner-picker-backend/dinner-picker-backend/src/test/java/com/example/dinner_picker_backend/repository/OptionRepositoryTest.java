@@ -22,6 +22,7 @@ public class OptionRepositoryTest {
     @Autowired
     private GroupRepository groupRepository;
     @Autowired
+
     private VotingSessionRepository votingSessionRepository;
 
     @Test
