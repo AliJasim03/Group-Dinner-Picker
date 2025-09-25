@@ -19,7 +19,7 @@ const renderAppWithProviders = () => {
   );
 };
 
-// Mock API calls to prevent network requests during testing
+
 jest.mock('./services/api', () => ({
   groupAPI: {
     getUserGroups: jest.fn().mockResolvedValue({ data: [] })
